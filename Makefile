@@ -17,9 +17,12 @@ build/boot.o: kernel/arch/x86_64/boot.S | build
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/kernel.o: kernel/kernel.c | build
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
-$(KERNEL): build/boot.o build/kernel.o
+build/idt.o: kernel/interrupts/idt.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+$(KERNEL): build/boot.o build/kernel.o build/idt.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
 clean:
