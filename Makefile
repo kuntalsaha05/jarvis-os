@@ -22,7 +22,10 @@ build/kernel.o: kernel/kernel.c | build
 build/idt.o: kernel/interrupts/idt.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
-$(KERNEL): build/boot.o build/kernel.o build/idt.o
+build/interrupts.o: kernel/interrupts/interrupts.S | build
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(KERNEL): build/boot.o build/kernel.o build/idt.o build/interrupts.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
 clean:

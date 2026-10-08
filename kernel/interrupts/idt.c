@@ -1,6 +1,12 @@
 #include <stdint.h>
 #include "idt.h"
 
+extern void interrupt_stub(void);
+
+void interrupt_handler(void)
+{
+}
+
 struct idt_entry
 {
     uint16_t offset_low;
@@ -48,6 +54,13 @@ void idt_init(void)
         idt[i].offset_high = 0;
         idt[i].reserved = 0;
     }
+    
+    idt_set_gate(
+    	32,
+    	(uint64_t)interrupt_stub,
+    	0x08,
+    	0x8E
+    );
 
     idt_descriptor.limit = sizeof(idt) - 1;
     idt_descriptor.base = (uint64_t)&idt[0];
