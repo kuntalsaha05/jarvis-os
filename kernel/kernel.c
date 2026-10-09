@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdint.h>
 #include "interrupts/idt.h"
+#include "interrupts/pic.h"
 
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
@@ -65,6 +66,7 @@ void kernel_main(void)
     terminal_clear();
 
     idt_init();
+    pic_init();
 
     terminal_write("========================================\n");
     terminal_write("              JARVIS-OS\n");
