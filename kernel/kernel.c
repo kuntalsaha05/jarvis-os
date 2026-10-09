@@ -2,6 +2,9 @@
 #include <stdint.h>
 #include "interrupts/idt.h"
 #include "interrupts/pic.h"
+#include "interrupts/pit.h"
+
+extern volatile uint64_t timer_ticks;
 
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
@@ -61,12 +64,57 @@ static void terminal_write(const char *str)
     }
 }
 
+static void display_timer_ticks(void)
+{
+    volatile uint16_t *video = (volatile uint16_t *)0xB8000;
+
+    const char *label = "Timer ticks: ";
+    int position = 6 * VGA_WIDTH;
+
+    for (int i = 0; label[i] != '\0'; i++)
+    {
+        video[position + i] = vga_entry(label[i], terminal_color);
+    }
+
+    uint64_t value = timer_ticks;
+    int digits_start = position + 13;
+
+    for (int i = 0; i < 10; i++)
+    {
+        video[digits_start + i] = vga_entry(' ', terminal_color);
+    }
+
+    if (value == 0)
+    {
+        video[digits_start] = vga_entry('0', terminal_color);
+        return;
+    }
+
+    char digits[20];
+    int count = 0;
+
+    while (value > 0)
+    {
+        digits[count++] = '0' + (value % 10);
+        value /= 10;
+    }
+
+    for (int i = 0; i < count; i++)
+    {
+        video[digits_start + i] =
+            vga_entry(digits[count - i - 1], terminal_color);
+    }
+}
+
 void kernel_main(void)
 {
     terminal_clear();
 
     idt_init();
     pic_init();
+    pit_init(100);
+    
+    __asm__ volatile ("sti");
 
     terminal_write("========================================\n");
     terminal_write("              JARVIS-OS\n");
@@ -79,6 +127,8 @@ void kernel_main(void)
 
     while (1)
     {
-        __asm__ volatile ("hlt");
+    display_timer_ticks();
+    __asm__ volatile ("hlt");
     }
 }
+	

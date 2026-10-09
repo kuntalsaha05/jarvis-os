@@ -25,10 +25,13 @@ build/idt.o: kernel/interrupts/idt.c | build
 build/pic.o: kernel/interrupts/pic.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
+build/pit.o: kernel/interrupts/pit.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
 build/interrupts.o: kernel/interrupts/interrupts.S | build
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(KERNEL): build/boot.o build/kernel.o build/idt.o build/interrupts.o build/pic.o
+$(KERNEL): build/boot.o build/kernel.o build/idt.o build/interrupts.o build/pic.o build/pit.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
 clean:

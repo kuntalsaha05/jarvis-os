@@ -1,10 +1,21 @@
 #include <stdint.h>
 #include "idt.h"
+#include "pic.h"
 
 extern void interrupt_stub(void);
+extern void timer_stub(void);
 
 void interrupt_handler(void)
 {
+}
+
+volatile uint64_t timer_ticks = 0;
+
+void timer_handler(void)
+{
+    timer_ticks++;
+
+    pic_send_eoi(0);
 }
 
 struct idt_entry
@@ -57,7 +68,7 @@ void idt_init(void)
     
     idt_set_gate(
     	32,
-    	(uint64_t)interrupt_stub,
+    	(uint64_t)timer_stub,
     	0x08,
     	0x8E
     );
