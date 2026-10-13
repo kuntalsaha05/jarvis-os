@@ -74,7 +74,9 @@ void pic_init(void)
     outb(PIC2_DATA, ICW4_8086);
     io_wait();
 
-    /* Restore interrupt masks */
+    /* Restore existing masks, then enable IRQ0 (PIT timer). */
+    master_mask &= (uint8_t)~0x01;
+
     outb(PIC1_DATA, master_mask);
     outb(PIC2_DATA, slave_mask);
 }

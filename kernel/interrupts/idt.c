@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "idt.h"
 #include "pic.h"
+#include "process/scheduler.h"
 
 extern void interrupt_stub(void);
 extern void timer_stub(void);
@@ -14,6 +15,8 @@ volatile uint64_t timer_ticks = 0;
 void timer_handler(void)
 {
     timer_ticks++;
+
+    scheduler_tick();
 
     pic_send_eoi(0);
 }

@@ -1,134 +1,127 @@
+
 #include <stdint.h>
-#include <stdint.h>
+
+#include "drivers/keyboard.h"
+#include "drivers/terminal.h"
 #include "interrupts/idt.h"
 #include "interrupts/pic.h"
 #include "interrupts/pit.h"
+#include "ipc/ipc.h"
+#include "memory/heap.h"
+#include "process/process.h"
+#include "process/scheduler.h"
+#include "shell/shell.h"
+#include "storage/ramdisk.h"
+#include "storage/block.h"
 
-extern volatile uint64_t timer_ticks;
-
-#define VGA_WIDTH 80
-#define VGA_HEIGHT 25
-
-static volatile uint16_t *vga_buffer = (uint16_t *)0xB8000;
-static uint8_t terminal_color = 0x07;
-static uint8_t terminal_row = 0;
-static uint8_t terminal_column = 0;
-
-static uint16_t vga_entry(unsigned char c, uint8_t color)
+static int test_ramdisk(void)
 {
-    return (uint16_t)c | (uint16_t)color << 8;
-}
+    uint8_t write_buffer[512];
+    uint8_t read_buffer[512];
 
-static void terminal_clear(void)
-{
-    for (uint8_t row = 0; row < VGA_HEIGHT; row++)
+    for (uint32_t i = 0; i < 512; i++)
     {
-        for (uint8_t column = 0; column < VGA_WIDTH; column++)
-        {
-            const uint16_t index = row * VGA_WIDTH + column;
-            vga_buffer[index] = vga_entry(' ', terminal_color);
-        }
+        write_buffer[i] = (uint8_t)(i & 0xFF);
+        read_buffer[i] = 0;
     }
 
-    terminal_row = 0;
-    terminal_column = 0;
-}
+    if (ramdisk_init() != 0)
+        return -1;
 
-static void terminal_putchar(char c)
-{
-    if (c == '\n')
+    if (block_write(0, 1, write_buffer) != 0)
+        return -2;
+
+    if (block_read(0, 1, read_buffer) != 0)
+        return -3;
+
+    for (uint32_t i = 0; i < 512; i++)
     {
-        terminal_column = 0;
-        terminal_row++;
-        return;
+        if (write_buffer[i] != read_buffer[i])
+            return -4;
     }
 
-    const uint16_t index = terminal_row * VGA_WIDTH + terminal_column;
+    return 0;
+}
 
-    vga_buffer[index] = vga_entry(c, terminal_color);
-
-    terminal_column++;
-
-    if (terminal_column == VGA_WIDTH)
-    {
-        terminal_column = 0;
-        terminal_row++;
+static void task_a(void)
+{
+    for (int i = 1; i <= 3; i++) {
+        terminal_write("Task A iteration ");
+        terminal_write_number((uint32_t)i);
+        terminal_putchar('\n');
+        scheduler_yield();
     }
 }
 
-static void terminal_write(const char *str)
+static void task_b(void)
 {
-    for (int i = 0; str[i] != '\0'; i++)
-    {
-        terminal_putchar(str[i]);
-    }
-}
-
-static void display_timer_ticks(void)
-{
-    volatile uint16_t *video = (volatile uint16_t *)0xB8000;
-
-    const char *label = "Timer ticks: ";
-    int position = 6 * VGA_WIDTH;
-
-    for (int i = 0; label[i] != '\0'; i++)
-    {
-        video[position + i] = vga_entry(label[i], terminal_color);
-    }
-
-    uint64_t value = timer_ticks;
-    int digits_start = position + 13;
-
-    for (int i = 0; i < 10; i++)
-    {
-        video[digits_start + i] = vga_entry(' ', terminal_color);
-    }
-
-    if (value == 0)
-    {
-        video[digits_start] = vga_entry('0', terminal_color);
-        return;
-    }
-
-    char digits[20];
-    int count = 0;
-
-    while (value > 0)
-    {
-        digits[count++] = '0' + (value % 10);
-        value /= 10;
-    }
-
-    for (int i = 0; i < count; i++)
-    {
-        video[digits_start + i] =
-            vga_entry(digits[count - i - 1], terminal_color);
+    for (int i = 1; i <= 3; i++) {
+        terminal_write("Task B iteration ");
+        terminal_write_number((uint32_t)i);
+        terminal_putchar('\n');
+        scheduler_yield();
     }
 }
 
 void kernel_main(void)
 {
-    terminal_clear();
+    terminal_initialize();
+
+    heap_init();
+
+    int ramdisk_result = test_ramdisk();
+    terminal_write("RAM disk test: ");
+    if (ramdisk_result == 0)
+    {
+        terminal_write("PASS\n");
+    }
+    else
+    {
+        terminal_write("FAIL, code ");
+        terminal_write_number((uint32_t)(-ramdisk_result));
+        terminal_putchar('\n');
+    }
+
+    terminal_write("========================================\n");
+    terminal_write("              JARVIS-OS\n");
+    terminal_write("========================================\n\n");
+
+    terminal_write("Kernel: x86-64\n");
+    terminal_write("Status: INITIALIZING\n\n");
 
     idt_init();
     pic_init();
     pit_init(100);
-    
+    ipc_init();
+
+    process_init();
+    scheduler_init();
+
+    terminal_write("Context-switch test starting...\n");
+
+    int task_a_pid = process_create((uint64_t)task_a, 1);
+    int task_b_pid = process_create((uint64_t)task_b, 1);
+
+    if (task_a_pid > 0 && task_b_pid > 0)
+    {
+        scheduler_start();
+        terminal_write("Context-switch test: returned to kernel\n");
+    }
+    else
+    {
+        terminal_write("Context-switch test: task creation failed\n");
+    }
+
+    terminal_write("Kernel initialization complete.\n");
+    terminal_write("Status: ONLINE\n");
+
     __asm__ volatile ("sti");
 
-    terminal_write("========================================\n");
-    terminal_write("              JARVIS-OS\n");
-    terminal_write("========================================\n");
-    terminal_write("\n");
-    terminal_write("Kernel: x86-64\n");
-    terminal_write("Status: ONLINE\n");
-    terminal_write("\n");
-    terminal_write("JARVIS-OS kernel initialized.\n");
+    keyboard_init();
+    shell_run();
 
     while (1)
     {
-    display_timer_ticks();
-    __asm__ volatile ("hlt");
+        __asm__ volatile ("hlt");
     }
 }
-	
