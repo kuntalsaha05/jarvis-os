@@ -13,6 +13,7 @@
 #include "shell/shell.h"
 #include "storage/ramdisk.h"
 #include "storage/block.h"
+#include "memory/page.h"
 
 static int test_ramdisk(void)
 {
@@ -42,7 +43,6 @@ static int test_ramdisk(void)
 
     return 0;
 }
-
 static void task_a(void)
 {
     for (int i = 1; i <= 3; i++) {
@@ -63,11 +63,40 @@ static void task_b(void)
     }
 }
 
+static void test_page_allocator(void)
+{
+    page_init();
+
+    void *a = page_alloc();
+    void *b = page_alloc();
+
+    int passed =
+        a != NULL &&
+        b != NULL &&
+        a != b &&
+        ((uintptr_t)a % PAGE_SIZE) == 0 &&
+        ((uintptr_t)b % PAGE_SIZE) == 0;
+
+    if (passed) {
+        passed =
+            page_free(a) == 0 &&
+            page_free(b) == 0 &&
+            page_free_count() == PAGE_POOL_COUNT;
+    }
+
+    terminal_write(
+        passed ?
+        "Page allocator test: PASS\n" :
+        "Page allocator test: FAIL\n"
+    );
+}
+
 void kernel_main(void)
 {
     terminal_initialize();
 
     heap_init();
+    test_page_allocator();
 
     int ramdisk_result = test_ramdisk();
     terminal_write("RAM disk test: ");
@@ -96,6 +125,7 @@ void kernel_main(void)
 
     process_init();
     scheduler_init();
+    scheduler_set_algorithm(SCHEDULER_RR);
 
     terminal_write("Context-switch test starting...\n");
 

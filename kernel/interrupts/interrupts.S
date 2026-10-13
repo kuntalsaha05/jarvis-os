@@ -66,3 +66,30 @@ timer_stub:
 
     RESTORE_REGISTERS
     iretq
+
+.global page_fault_stub
+.extern page_fault_handler
+
+page_fault_stub:
+    cld
+    SAVE_REGISTERS
+
+    # Preserve the original saved-register stack pointer.
+    movq %rsp, %r12
+
+    # Arguments:
+    # rdi = faulting virtual address (CR2)
+    # rsi = CPU-generated page-fault error code
+    movq %cr2, %rdi
+    movq 120(%rsp), %rsi
+
+    andq $-16, %rsp
+    call page_fault_handler
+
+    movq %r12, %rsp
+
+    RESTORE_REGISTERS
+
+    # Remove the CPU-generated error code before IRETQ.
+    addq $8, %rsp
+    iretq

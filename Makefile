@@ -21,6 +21,7 @@ OBJECTS = \
 	build/process.o \
 	build/scheduler.o \
 	build/heap.o \
+	build/page.o \
 	build/syscall.o \
 	build/ipc.o \
 	build/semaphore.o \
@@ -65,6 +66,9 @@ build/scheduler.o: kernel/process/scheduler.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
 build/heap.o: kernel/memory/heap.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/page.o: kernel/memory/page.c kernel/memory/page.h | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
 build/syscall.o: kernel/syscall/syscall.c | build

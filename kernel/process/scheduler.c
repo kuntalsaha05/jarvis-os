@@ -9,6 +9,7 @@ static scheduler_algorithm_t current_algorithm = SCHEDULER_FCFS;
 static process_t *current_process;
 static uint64_t bootstrap_rsp;
 static int scheduler_started;
+static uint32_t rr_cursor;
 
 void scheduler_init(void)
 {
@@ -16,6 +17,7 @@ void scheduler_init(void)
     current_process = NULL;
     bootstrap_rsp = 0;
     scheduler_started = 0;
+    rr_cursor = MAX_PROCESSES - 1;
 }
 
 void scheduler_set_algorithm(scheduler_algorithm_t algorithm)
@@ -32,6 +34,19 @@ scheduler_algorithm_t scheduler_get_algorithm(void)
 process_t *scheduler_select_next(void)
 {
     process_t *selected = NULL;
+
+    if (current_algorithm == SCHEDULER_RR) {
+        for (uint32_t offset = 1; offset <= MAX_PROCESSES; offset++) {
+            uint32_t i = (rr_cursor + offset) % MAX_PROCESSES;
+            process_t *p = process_get_by_index(i);
+
+            if (p != NULL && p->state == PROCESS_READY) {
+                rr_cursor = i;
+                return p;
+            }
+        }
+        return NULL;
+    }
 
     for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
         process_t *p = process_get_by_index(i);
@@ -62,12 +77,14 @@ void scheduler_start(void)
         return;
 
     process_t *next = scheduler_select_next();
+
     if (next == NULL)
         return;
 
     scheduler_started = 1;
     current_process = next;
     next->state = PROCESS_RUNNING;
+    next->cpu_time++;
 
     context_switch(&bootstrap_rsp, next->saved_rsp);
 
@@ -112,7 +129,9 @@ void scheduler_yield(void)
 
 void scheduler_tick(void)
 {
-    /* Timer ticks do not preempt tasks in this cooperative stage. */
+    /*
+     * Accounting only. Timer-driven preemption is a later stage.
+     */
     if (current_process != NULL &&
         current_process->state == PROCESS_RUNNING)
         current_process->cpu_time++;
