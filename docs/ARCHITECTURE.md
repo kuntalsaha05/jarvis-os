@@ -133,3 +133,34 @@ To support interactive use and automated smoke testing without external display 
   3. The QEMU/Bochs debug port at I/O port `0xE9`.
 - **Input**: `keyboard_read_char` polls both the COM1 serial status register (`0x3FD & 0x01`) and the PS/2 keyboard controller (`0x64 & 0x01`). Keystrokes typed into either the graphical window or a piped terminal session are handled identically.
 
+---
+
+## 7. System Call Entry Architecture (`int $0x80`)
+
+The system call infrastructure provides a clean interrupt-driven gateway into kernel services:
+- **Invocation**: User-level or diagnostic code invokes software interrupt `int $0x80` with `%rax` set to the system call number, and `%rdi`, `%rsi`, `%rdx` containing arguments.
+- **IDT Gate**: Vector `0x80` is configured with Descriptor Privilege Level 3 (`0xEE`), permitting invocation from software interrupts.
+- **Assembly Stub (`syscall_stub`)**:
+  1. Macro `SAVE_REGISTERS` pushes all 15 GPRs to form the standard interrupt frame.
+  2. Extracts parameters from the stack frame:
+     - `112(%rsp)`: Syscall number (saved `rax`) -> `%rdi`
+     - `64(%rsp)`: Arg 1 (saved `rdi`) -> `%rsi`
+     - `72(%rsp)`: Arg 2 (saved `rsi`) -> `%rdx`
+     - `88(%rsp)`: Arg 3 (saved `rdx`) -> `%rcx`
+  3. Calls `syscall_dispatch(%rdi, %rsi, %rdx, %rcx)` with 16-byte stack alignment.
+  4. Writes return value in `%rax` back to `112(%rsp)` on the stack.
+  5. `RESTORE_REGISTERS` pops all registers and executes `iretq`.
+- **Dispatcher (`syscall_dispatch`)**: Validates the system call number against `SYSCALL_MAX` and dispatches to kernel service routines (`SYS_GET_TICKS`, `SYS_ALLOCATE_MEMORY`, `SYS_FREE_MEMORY`, `SYS_CREATE_PROCESS`, `SYS_GET_PROCESS_COUNT`, `SYS_TERMINATE_PROCESS`).
+
+---
+
+## 8. Educational Algorithm Subsystems
+
+The operating system includes deterministic educational simulators for key computer science concepts:
+1. **Memory Allocation Strategies (`kernel/algorithms/mem_fit.c`)**: First Fit, Best Fit, and Worst Fit algorithms calculating block assignments, remaining partition holes, and external fragmentation.
+2. **File Allocation Methods (`kernel/algorithms/file_alloc.c`)**: Contiguous, Linked, and Indexed allocation simulators comparing access speed ($O(1)$ vs $O(N)$), overhead, and fragmentation.
+3. **Deadlock Management (`kernel/algorithms/banker.c`, `deadlock.c`)**:
+   - Avoidance: Dijkstra's Banker's algorithm computing Need matrices and safe execution sequences.
+   - Detection: Matrix and Wait-For Graph (WFG) cycle detection identifying deadlocked process sets.
+   - Prevention: Havender's global linear resource hierarchy preventing circular wait conditions.
+

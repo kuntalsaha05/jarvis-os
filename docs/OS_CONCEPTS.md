@@ -119,3 +119,63 @@ Disk scheduling algorithms order outstanding I/O track requests to minimize mech
 4. **C-SCAN (Circular SCAN)**:
    - The head sweeps in one direction to the end of the disk, then immediately jumps back to track 0 without servicing requests on the return trip, providing a more uniform wait time.
 
+---
+
+## 6. Memory Allocation Strategies (Fit Algorithms)
+
+When satisfying memory requests of variable size from a set of free partitions (holes):
+
+1. **First Fit**:
+   - Scans partitions from the beginning and allocates the first hole that is large enough ($\text{size} \ge \text{request}$).
+   - Advantage: Fast search time ($O(N)$ worst-case, often terminating early).
+2. **Best Fit**:
+   - Searches the entire partition list and allocates the smallest hole that is big enough:
+     $$\text{hole}^* = \arg\min_{\text{hole} \ge \text{req}} (\text{size}(\text{hole}) - \text{req})$$
+   - Advantage: Leaves larger blocks intact for subsequent large requests.
+   - Disadvantage: Generates small, unusable leftover slivers.
+3. **Worst Fit**:
+   - Searches the entire partition list and allocates the largest available hole:
+     $$\text{hole}^* = \arg\max_{\text{hole} \ge \text{req}} (\text{size}(\text{hole}))$$
+   - Concept: Leaves behind a remaining hole that is still large enough to be useful.
+4. **External Fragmentation**:
+   - Occurs when total free memory across all unallocated blocks is sufficient to satisfy a request, but no single contiguous partition is large enough:
+     $$\text{External Frag} = \sum_{\text{unallocated}} \text{size}(\text{block}) \quad \text{when } \max(\text{size}) < \text{req}$$
+
+---
+
+## 7. File Allocation Methods
+
+In file system architecture, allocating disk sectors to files determines random-access performance and storage efficiency:
+
+1. **Contiguous Allocation**:
+   - Each file occupies a contiguous set of physical disk blocks (defined by `start_block` and `length`).
+   - **Access**: $O(1)$ direct access via $\text{physical} = \text{start} + \text{logical}$. Fastest sequential and random I/O.
+   - **Limitation**: Suffers from external disk fragmentation and file growth constraints.
+2. **Linked Allocation**:
+   - Each file is a linked list of disk blocks. Each sector contains a pointer to the next sector in the chain.
+   - **Access**: $O(N)$ sequential traversal required to reach logical block $k$.
+   - **Advantage**: Zero external fragmentation; files can grow dynamically anywhere free blocks exist.
+3. **Indexed Allocation**:
+   - Brings all block pointers together into an **index block** (or inode direct block array).
+   - **Access**: $O(1)$ random access by indexing into the pointer array at $\text{index\_table}[k]$.
+   - **Overhead**: Requires 1 dedicated index block per file, which may be underutilized for tiny files.
+
+---
+
+## 8. Deadlock Detection & Prevention
+
+Beyond Dijkstra's avoidance, operating systems manage deadlocks via detection and prevention:
+
+### 8.1 Deadlock Detection (Matrix & Wait-For Graph)
+When a system does not employ avoidance, deadlocks may occur and must be detected:
+- **Available Vector $W$**, **Allocation Matrix $A$**, and **Request Matrix $Q$**.
+- A process $P_i$ can finish if its outstanding request $Q[i] \le W$.
+- If $Q[i] \le W$, simulate completion: $W = W + A[i]$, mark $P_i$ as finishable.
+- If algorithm terminates with processes whose requests cannot be satisfied, those processes constitute a **deadlocked cycle** (circular wait).
+
+### 8.2 Deadlock Prevention (Havender's Resource Ordering)
+Prevention eliminates deadlock mathematically by invalidating at least one of the four Coffman conditions.
+- **Havender's Linear Ordering**: Assign a global unique integer priority $F(R_j)$ to every resource type $R_j$.
+- **Invariant Rule**: A process holding resource $R_i$ may request resource $R_j$ if and only if $F(R_j) > F(R_i)$.
+- **Proof**: If a circular wait $P_0 \to P_1 \to \dots \to P_k \to P_0$ were to exist, then $F(R_0) < F(R_1) < \dots < F(R_k) < F(R_0)$, which implies $F(R_0) < F(R_0)$—a mathematical contradiction. Hence, circular wait is impossible.
+

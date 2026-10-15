@@ -12,9 +12,10 @@ class JarvisCompanion:
     and bridges host intelligence with the bare-metal kernel environment.
     """
 
-    def __init__(self, llm_manager: LLMManager, tool_registry: Optional[ToolRegistry] = None):
+    def __init__(self, llm_manager: LLMManager, tool_registry: Optional[ToolRegistry] = None, transport=None):
         self.llm = llm_manager
         self.registry = tool_registry or ToolRegistry()
+        self.transport = transport
         self.request_counter = 0
 
     def query_kernel(self, user_prompt: str) -> Dict[str, Any]:

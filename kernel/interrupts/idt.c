@@ -9,6 +9,7 @@ extern void interrupt_stub(void);
 extern void timer_stub(void);
 extern void schedule_stub(void);
 extern void generic_exception_stub(void);
+extern void syscall_stub(void);
 
 void interrupt_handler(void)
 {
@@ -150,6 +151,13 @@ void idt_init(void)
         (uint64_t)timer_stub,
         0x08,
         0x8E
+    );
+
+    idt_set_gate(
+        0x80,
+        (uint64_t)syscall_stub,
+        0x08,
+        0xEE
     );
 
     idt_set_gate(

@@ -120,31 +120,55 @@ class ToolRegistry:
             "kernel.query_status",
             "Retrieve kernel uptime, architecture, and current state.",
             PermissionLevel.READ_ONLY,
-            lambda args: {"kernel": "x86-64", "status": "ONLINE", "mode": "Multiboot/LongMode"}
+            lambda args: {
+                "telemetry_source": "OFFLINE_SIMULATION",
+                "kernel": "x86-64",
+                "status": "ONLINE",
+                "mode": "Multiboot/LongMode"
+            }
         )
         self.register_tool(
             "memory.get_stats",
             "Retrieve physical page allocator and heap usage metrics.",
             PermissionLevel.READ_ONLY,
-            lambda args: {"page_size": 4096, "total_pages": 64, "free_pages": 64, "heap_kb": 64}
+            lambda args: {
+                "telemetry_source": "OFFLINE_SIMULATION",
+                "page_size": 4096,
+                "total_pages": 64,
+                "free_pages": 64,
+                "heap_kb": 64
+            }
         )
         self.register_tool(
             "scheduler.get_state",
             "Retrieve process table count and scheduler configuration.",
             PermissionLevel.READ_ONLY,
-            lambda args: {"algorithm": "Round Robin", "quantum_ticks": 5, "max_processes": 32}
+            lambda args: {
+                "telemetry_source": "OFFLINE_SIMULATION",
+                "algorithm": "Round Robin",
+                "quantum_ticks": 5,
+                "max_processes": 32
+            }
         )
         self.register_tool(
             "storage.list_files",
             "List all files stored on the RAM-disk JARVIS-FS filesystem.",
             PermissionLevel.READ_ONLY,
-            lambda args: {"filesystem": "JARVIS-FS", "files": ["kernel.cfg", "ai_agent.log"]}
+            lambda args: {
+                "telemetry_source": "OFFLINE_SIMULATION",
+                "filesystem": "JARVIS-FS",
+                "files": ["kernel.cfg", "ai_agent.log"]
+            }
         )
         self.register_tool(
             "system.execute_algorithm_demo",
             "Trigger an educational algorithm demonstration.",
             PermissionLevel.READ_ONLY,
-            lambda args: {"demonstration": args.get("demo_name", "all"), "result": "Demo triggered via companion bridge"},
+            lambda args: {
+                "telemetry_source": "OFFLINE_SIMULATION",
+                "demonstration": args.get("demo_name", "all"),
+                "result": "Demo triggered via companion bridge"
+            },
             param_schema={"demo_name": str}
         )
 

@@ -101,6 +101,28 @@ class TestAICompanion(unittest.TestCase):
         self.assertEqual(resp2.request_id, 42)
         self.assertEqual(resp2.result["uptime"], 100)
 
+    def test_telemetry_source_truthfulness(self):
+        # Tools in offline simulation mode must explicitly state OFFLINE_SIMULATION
+        status = self.registry.execute_tool("kernel.query_status", {})
+        self.assertEqual(status["result"]["telemetry_source"], "OFFLINE_SIMULATION")
+
+        mem = self.registry.execute_tool("memory.get_stats", {})
+        self.assertEqual(mem["result"]["telemetry_source"], "OFFLINE_SIMULATION")
+
+        sched = self.registry.execute_tool("scheduler.get_state", {})
+        self.assertEqual(sched["result"]["telemetry_source"], "OFFLINE_SIMULATION")
+
+        storage = self.registry.execute_tool("storage.list_files", {})
+        self.assertEqual(storage["result"]["telemetry_source"], "OFFLINE_SIMULATION")
+
+    def test_malformed_bridge_requests(self):
+        # Invalid JSON fallback
+        try:
+            BridgeRequest.from_json("invalid-json-string")
+            self.fail("Should raise ValueError or json.JSONDecodeError")
+        except Exception:
+            pass
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -13,6 +13,7 @@ class AirLLMBackend(LLMInterface):
     def __init__(self, model_name: Optional[str] = None):
         self.model_name = model_name or os.environ.get("JARVIS_AIRLLM_MODEL", "garage-bAInd/Platypus2-70B-instruct")
         self.model = None
+        self.load()
 
     def load(self):
         try:

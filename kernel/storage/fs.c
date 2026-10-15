@@ -143,8 +143,11 @@ int fs_open(const char *name)
 int fs_write(int fd, const void *buf, uint32_t count)
 {
     if (!fs_mounted || fd < 0 || fd >= FS_MAX_FILES || !open_files[fd].used || buf == 0) return -1;
+    if (open_files[fd].inode_idx < 0 || open_files[fd].inode_idx >= FS_MAX_FILES) return -1;
 
     fs_inode_t *node = &inodes[open_files[fd].inode_idx];
+    if (!node->used) return -1;
+
     const uint8_t *src = (const uint8_t *)buf;
     uint32_t written = 0;
 
@@ -153,7 +156,7 @@ int fs_write(int fd, const void *buf, uint32_t count)
         uint32_t block_offset = open_files[fd].offset % FS_BLOCK_SIZE;
 
         if (block_index >= FS_DIRECT_BLOCKS) {
-            break; /* File size limit reached */
+            break; /* File size limit reached (4096 bytes direct) */
         }
 
         if (node->blocks[block_index] == 0) {
@@ -187,8 +190,11 @@ int fs_write(int fd, const void *buf, uint32_t count)
 int fs_read(int fd, void *buf, uint32_t count)
 {
     if (!fs_mounted || fd < 0 || fd >= FS_MAX_FILES || !open_files[fd].used || buf == 0) return -1;
+    if (open_files[fd].inode_idx < 0 || open_files[fd].inode_idx >= FS_MAX_FILES) return -1;
 
     fs_inode_t *node = &inodes[open_files[fd].inode_idx];
+    if (!node->used) return -1;
+
     uint8_t *dst = (uint8_t *)buf;
     uint32_t read_bytes = 0;
 
@@ -202,7 +208,7 @@ int fs_read(int fd, void *buf, uint32_t count)
         uint32_t block_index = open_files[fd].offset / FS_BLOCK_SIZE;
         uint32_t block_offset = open_files[fd].offset % FS_BLOCK_SIZE;
 
-        if (node->blocks[block_index] == 0) break;
+        if (block_index >= FS_DIRECT_BLOCKS || node->blocks[block_index] == 0) break;
 
         uint8_t sector_buf[FS_BLOCK_SIZE];
         block_read(node->blocks[block_index], 1, sector_buf);
@@ -224,7 +230,10 @@ int fs_read(int fd, void *buf, uint32_t count)
 int fs_close(int fd)
 {
     if (fd >= 0 && fd < FS_MAX_FILES) {
+        if (!open_files[fd].used) return -1;
         open_files[fd].used = 0;
+        open_files[fd].offset = 0;
+        open_files[fd].inode_idx = -1;
         return 0;
     }
     return -1;
@@ -236,6 +245,14 @@ int fs_delete(const char *name)
 
     for (uint32_t i = 0; i < FS_MAX_FILES; i++) {
         if (inodes[i].used && str_equals(inodes[i].name, name)) {
+            /* Invalidate any active file descriptors referencing this inode */
+            for (uint32_t d = 0; d < FS_MAX_FILES; d++) {
+                if (open_files[d].used && open_files[d].inode_idx == (int)i) {
+                    open_files[d].used = 0;
+                    open_files[d].offset = 0;
+                    open_files[d].inode_idx = -1;
+                }
+            }
             for (int b = 0; b < FS_DIRECT_BLOCKS; b++) {
                 if (inodes[i].blocks[b] != 0) {
                     free_block(inodes[i].blocks[b]);

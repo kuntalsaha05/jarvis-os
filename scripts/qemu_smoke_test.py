@@ -21,10 +21,14 @@ def main():
         "status\n"
         "sched\n"
         "paging\n"
+        "fit\n"
+        "alloc\n"
         "deadlock\n"
+        "detect\n"
         "disk\n"
         "sync\n"
         "files\n"
+        "syscall\n"
     ).encode("utf-8")
 
     start_time = time.time()
@@ -36,7 +40,7 @@ def main():
             stderr=subprocess.PIPE
         )
 
-        stdout_data, stderr_data = proc.communicate(input=commands_to_send, timeout=7)
+        stdout_data, stderr_data = proc.communicate(input=commands_to_send, timeout=9)
     except subprocess.TimeoutExpired:
         proc.kill()
         stdout_data, stderr_data = proc.communicate()
@@ -53,19 +57,31 @@ def main():
         ("Page Allocator Test", "Page allocator test: PASS"),
         ("RAM Disk Test", "RAM disk test: PASS"),
         ("Kernel Online", "Status: ONLINE"),
-        ("Cooperative/Preemption Switching", "Task A iteration"),
-        ("Task A/B Return", "Context-switch test: returned to kernel"),
+        ("Cooperative Switching", "Task A iteration"),
+        ("Cooperative Return", "Context-switch test: returned to kernel"),
+        ("Timer Preemption Execution", "PIT timer preemption test starting"),
+        ("Timer Preemption Quanta Switch", "[PREEMPT 1] Preempted across timer quanta, completed!"),
+        ("Timer Preemption Verified", "PIT timer preemption test: PASS (involuntary timer preemption verified)"),
         ("Shell Ready", "jarvis>"),
         ("CPU Scheduling Simulation", "CPU SCHEDULING ALGORITHM BENCHMARK"),
         ("Page Replacement Benchmark", "PAGE REPLACEMENT ALGORITHM BENCHMARK"),
         ("Belady's Anomaly", "ANOMALY CONFIRMED!"),
+        ("Memory Allocation Fit Benchmark", "MEMORY ALLOCATION STRATEGIES DEMO"),
+        ("Best Fit Allocs", "Summary: 4 allocated, 0 failed"),
+        ("File Allocation Methods Benchmark", "FILE ALLOCATION METHODS DEMO"),
+        ("File Allocation Lookup", "Logical block 2 of file1 -> Physical Block 2"),
         ("Banker's Deadlock Avoidance", "BANKER'S DEADLOCK AVOIDANCE"),
         ("Banker Safe Sequence", "Safe sequence found"),
+        ("Deadlock Detection & Prevention", "DEADLOCK DETECTION & PREVENTION"),
+        ("Deadlock Detection Cycle Found", "Deadlock Detected in Processes: P0, P1"),
+        ("Deadlock Prevention Havender", "Deadlock Prevention (Havender's Resource Ordering)"),
         ("Disk Scheduling Simulation", "DISK SCHEDULING BENCHMARK"),
         ("Synchronization Invariants", "SYNCHRONIZATION & IPC BENCHMARK"),
         ("Producer-Consumer Invariant", "Bounded buffer, FIFO order"),
         ("Reader-Writer Invariant", "Concurrent read allowed; exclusive write enforced"),
-        ("JARVIS-FS Directory", "JARVIS-FS Directory Listing")
+        ("JARVIS-FS Directory", "JARVIS-FS Directory Listing"),
+        ("Software Interrupt Syscall", "SYSTEM CALL DISPATCH BENCHMARK"),
+        ("Syscall int $0x80 Execution", "SYS_GET_TICKS via int $0x80")
     ]
 
     all_passed = True
@@ -78,7 +94,7 @@ def main():
 
     print("\n==================================================")
     if all_passed:
-        print("   ALL 16 VERIFICATION CHECKPOINTS PASSED!       ")
+        print(f"   ALL {len(required_checkpoints)} VERIFICATION CHECKPOINTS PASSED!       ")
         print("==================================================")
         return 0
     else:

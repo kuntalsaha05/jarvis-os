@@ -99,10 +99,14 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 | `status` | Show kernel state, uptime ticks, and free pages |
 | `sched` | Run CPU Scheduling Benchmark (FCFS, SJF, Round Robin) |
 | `paging` | Run Page Replacement Benchmark and Belady's Anomaly demo |
+| `fit` | Run Memory Allocation Fit demo (First, Best, Worst Fit & fragmentation) |
+| `alloc` | Run File Allocation Methods demo (Contiguous, Linked, Indexed) |
 | `deadlock` | Run Banker's Deadlock Avoidance and safe sequence search |
+| `detect` | Run Deadlock Detection (WFG/Matrix) & Havender Prevention demo |
 | `disk` | Run Disk Head Scheduling (FCFS, SSTF, SCAN, C-SCAN) |
 | `sync` | Run Producer-Consumer and Reader-Writer synchronization tests |
 | `files` | Run JARVIS-FS filesystem formatting, file creation, and `ls` |
+| `syscall` | Run software interrupt `int $0x80` System Call Dispatch demo |
 | `ipc` | Run Bounded Message Queue IPC test |
 | `ai` | Display AI companion protocol and active allowlisted tools |
 | `tests` | Run the complete in-kernel benchmark suite |

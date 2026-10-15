@@ -6,6 +6,9 @@
 #include "algorithms/page_replace.h"
 #include "algorithms/banker.h"
 #include "algorithms/disk_sched.h"
+#include "algorithms/mem_fit.h"
+#include "algorithms/file_alloc.h"
+#include "algorithms/deadlock.h"
 
 /* Provide stubs for terminal functions when running in host unit test mode */
 void terminal_write(const char *str) {
@@ -171,6 +174,142 @@ static void test_disk_scheduling(void)
     printf("PASS\n");
 }
 
+/* ========================================================
+ * 5. Memory Allocation Fit Tests (First, Best, Worst Fit)
+ * ======================================================== */
+static void test_mem_fit(void)
+{
+    printf("[TEST] Memory Allocation Fit (First, Best, Worst)... ");
+
+    const uint32_t blocks[5] = { 100, 500, 200, 300, 600 };
+    const uint32_t requests[4] = { 212, 417, 112, 426 };
+
+    mem_fit_result_t res_ff, res_bf, res_wf;
+
+    /* First Fit */
+    mem_fit_first(blocks, 5, requests, 4, &res_ff);
+    assert(res_ff.successful_allocs == 3);
+    assert(res_ff.failed_allocs == 1);
+    assert(res_ff.results[0].allocated_block_id == 1); /* 212 -> 500 */
+    assert(res_ff.results[1].allocated_block_id == 4); /* 417 -> 600 */
+    assert(res_ff.results[2].allocated_block_id == 2); /* 112 -> 200 */
+    assert(res_ff.results[3].allocated_block_id == -1); /* 426 fails (external fragmentation) */
+    assert(res_ff.external_frag == 400); /* 100 + 300 free bytes */
+
+    /* Best Fit */
+    mem_fit_best(blocks, 5, requests, 4, &res_bf);
+    assert(res_bf.successful_allocs == 4);
+    assert(res_bf.failed_allocs == 0);
+    assert(res_bf.results[0].allocated_block_id == 3); /* 212 -> 300 */
+    assert(res_bf.results[1].allocated_block_id == 1); /* 417 -> 500 */
+    assert(res_bf.results[2].allocated_block_id == 2); /* 112 -> 200 */
+    assert(res_bf.results[3].allocated_block_id == 4); /* 426 -> 600 */
+
+    /* Worst Fit */
+    mem_fit_worst(blocks, 5, requests, 4, &res_wf);
+    assert(res_wf.results[0].allocated_block_id == 4); /* 212 -> 600 */
+    assert(res_wf.results[1].allocated_block_id == 1); /* 417 -> 500 */
+    assert(res_wf.results[2].allocated_block_id == 3); /* 112 -> 300 (largest remaining unallocated) */
+    assert(res_wf.results[3].allocated_block_id == -1); /* 426 fails */
+
+    printf("PASS\n");
+}
+
+/* ========================================================
+ * 6. File Allocation Methods (Contiguous, Linked, Indexed)
+ * ======================================================== */
+static void test_file_alloc(void)
+{
+    printf("[TEST] File Allocation Methods (Contiguous, Linked, Indexed)... ");
+
+    file_alloc_disk_t disk;
+    file_alloc_disk_init(&disk);
+    assert(disk.total_blocks == 64);
+    assert(disk.free_blocks == 64);
+
+    /* 1. Contiguous Allocation */
+    contiguous_file_t cfile;
+    int c_ok = file_alloc_contiguous(&disk, "os_core.bin", 4, &cfile);
+    assert(c_ok == 0);
+    assert(cfile.success == 1);
+    assert(cfile.start_block == 0);
+    assert(cfile.size_blocks == 4);
+    assert(disk.free_blocks == 60);
+
+    /* Logical-to-physical block resolution */
+    assert(file_alloc_contiguous_lookup(&cfile, 0) == 0);
+    assert(file_alloc_contiguous_lookup(&cfile, 2) == 2);
+    assert(file_alloc_contiguous_lookup(&cfile, 4) == -1); /* Out of bounds */
+
+    /* 2. Linked Allocation */
+    linked_file_t lfile;
+    int l_ok = file_alloc_linked(&disk, "kernel.log", 3, &lfile);
+    assert(l_ok == 0);
+    assert(lfile.success == 1);
+    assert(lfile.start_block == 4);
+    assert(lfile.end_block == 6);
+    assert(disk.free_blocks == 57);
+
+    assert(file_alloc_linked_lookup(&lfile, 0) == 4);
+    assert(file_alloc_linked_lookup(&lfile, 1) == 5);
+    assert(file_alloc_linked_lookup(&lfile, 2) == 6);
+    assert(file_alloc_linked_lookup(&lfile, 3) == -1);
+
+    /* 3. Indexed Allocation */
+    indexed_file_t ifile;
+    int i_ok = file_alloc_indexed(&disk, "index.db", 3, &ifile);
+    assert(i_ok == 0);
+    assert(ifile.success == 1);
+    assert(ifile.index_block == 7);
+    assert(disk.free_blocks == 53); /* 3 data blocks + 1 index block */
+
+    assert(file_alloc_indexed_lookup(&ifile, 0) == 8);
+    assert(file_alloc_indexed_lookup(&ifile, 1) == 9);
+    assert(file_alloc_indexed_lookup(&ifile, 2) == 10);
+    assert(file_alloc_indexed_lookup(&ifile, 3) == -1);
+
+    /* Out of space check */
+    contiguous_file_t huge_file;
+    int fail_res = file_alloc_contiguous(&disk, "huge.bin", 100, &huge_file);
+    assert(fail_res == -1);
+
+    printf("PASS\n");
+}
+
+/* ========================================================
+ * 7. Deadlock Detection & Prevention Tests
+ * ======================================================== */
+static void test_deadlock_detection_and_prevention(void)
+{
+    printf("[TEST] Deadlock Detection (WFG/Matrix) & Prevention... ");
+
+    /* Deadlocked system: P0 has R0 wants R1, P1 has R1 wants R0 */
+    deadlock_detection_system_t sys;
+    sys.process_count = 2;
+    sys.resource_count = 2;
+    sys.available[0] = 0;
+    sys.available[1] = 0;
+
+    sys.allocation[0][0] = 1; sys.allocation[0][1] = 0;
+    sys.allocation[1][0] = 0; sys.allocation[1][1] = 1;
+
+    sys.request[0][0] = 0; sys.request[0][1] = 1; /* P0 waits for R1 */
+    sys.request[1][0] = 1; sys.request[1][1] = 0; /* P1 waits for R0 */
+
+    deadlock_detection_result_t res;
+    deadlock_detect(&sys, &res);
+    assert(res.deadlock_detected == 1);
+    assert(res.deadlocked_count == 2);
+
+    /* Safe system: Available has enough to satisfy P0 */
+    sys.available[1] = 1;
+    deadlock_detect(&sys, &res);
+    assert(res.deadlock_detected == 0);
+    assert(res.deadlocked_count == 0);
+
+    printf("PASS\n");
+}
+
 int main(void)
 {
     printf("==================================================\n");
@@ -181,6 +320,9 @@ int main(void)
     test_page_replacement();
     test_banker_algorithm();
     test_disk_scheduling();
+    test_mem_fit();
+    test_file_alloc();
+    test_deadlock_detection_and_prevention();
 
     printf("==================================================\n");
     printf("   ALL HOST UNIT TESTS COMPLETED SUCCESSFULLY!    \n");

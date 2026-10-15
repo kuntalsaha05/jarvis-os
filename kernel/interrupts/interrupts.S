@@ -78,6 +78,28 @@ schedule_stub:
     RESTORE_REGISTERS
     iretq
 
+.global syscall_stub
+.extern syscall_dispatch
+
+syscall_stub:
+    cld
+    SAVE_REGISTERS
+
+    movq 112(%rsp), %rdi    # syscall number (saved rax)
+    movq 64(%rsp), %rsi     # arg1 (saved rdi)
+    movq 72(%rsp), %rdx     # arg2 (saved rsi)
+    movq 88(%rsp), %rcx     # arg3 (saved rdx)
+
+    movq %rsp, %r12
+    andq $-16, %rsp
+    call syscall_dispatch
+    movq %r12, %rsp
+
+    movq %rax, 112(%rsp)    # overwrite saved rax with return value
+
+    RESTORE_REGISTERS
+    iretq
+
 .global generic_exception_stub
 .extern generic_exception_handler
 

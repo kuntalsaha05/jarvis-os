@@ -12,7 +12,11 @@
 #include "algorithms/sched_sim.h"
 #include "algorithms/page_replace.h"
 #include "algorithms/banker.h"
+#include "algorithms/deadlock.h"
+#include "algorithms/mem_fit.h"
+#include "algorithms/file_alloc.h"
 #include "algorithms/disk_sched.h"
+#include "syscall/syscall.h"
 #include <stdint.h>
 
 extern volatile uint64_t timer_ticks;
@@ -45,11 +49,15 @@ static void print_help(void)
     terminal_write("OS Concept Demonstrations:\n");
     terminal_write("  sched      - Run CPU Scheduling Benchmark (FCFS, SJF, RR)\n");
     terminal_write("  paging     - Run Page Replacement & Belady's Anomaly demo\n");
+    terminal_write("  fit        - Run Memory Allocation Fit demo (First, Best, Worst Fit)\n");
+    terminal_write("  alloc      - Run File Allocation demo (Contiguous, Linked, Indexed)\n");
     terminal_write("  ipc        - Run Message Queue IPC demonstration\n");
     terminal_write("  sync       - Run Producer-Consumer & Reader-Writer demo\n");
     terminal_write("  deadlock   - Run Banker's Deadlock Avoidance demo\n");
+    terminal_write("  detect     - Run Deadlock Detection & Prevention demo\n");
     terminal_write("  disk       - Run Disk Head Scheduling (FCFS, SSTF, SCAN)\n");
     terminal_write("  files      - Run JARVIS-FS Filesystem & directory demo\n");
+    terminal_write("  syscall    - Run int $0x80 System Call Dispatch demo\n");
     terminal_write("  ai         - Show AI Companion Architecture & tool allowlist\n");
     terminal_write("  tests      - Run all OS algorithmic verification tests\n");
     terminal_write("==================================================\n");
@@ -126,23 +134,35 @@ static void run_all_tests(void)
 {
     terminal_write("\n>>> RUNNING FULL SYSTEM VERIFICATION SUITE <<<\n");
 
-    terminal_write("\n[1/6] CPU Scheduling Algorithms...");
+    terminal_write("\n[1/10] CPU Scheduling Algorithms...");
     sched_sim_run_demo();
 
-    terminal_write("\n[2/6] Page Replacement & Belady's Anomaly...");
+    terminal_write("\n[2/10] Page Replacement & Belady's Anomaly...");
     page_replace_run_demo();
 
-    terminal_write("\n[3/6] Banker's Deadlock Avoidance...");
+    terminal_write("\n[3/10] Memory Allocation Fit (First/Best/Worst)...");
+    mem_fit_run_demo();
+
+    terminal_write("\n[4/10] Banker's Deadlock Avoidance...");
     banker_run_demo();
 
-    terminal_write("\n[4/6] Disk Head Scheduling...");
+    terminal_write("\n[5/10] Deadlock Detection & Prevention...");
+    deadlock_run_demo();
+
+    terminal_write("\n[6/10] Disk Head Scheduling...");
     disk_sched_run_demo();
 
-    terminal_write("\n[5/6] Concurrency & Synchronization Invariants...");
+    terminal_write("\n[7/10] Concurrency & Synchronization Invariants...");
     sync_run_demo();
 
-    terminal_write("\n[6/6] RAM-Disk Filesystem...");
+    terminal_write("\n[8/10] File Allocation Methods (Contiguous/Linked/Indexed)...");
+    file_alloc_run_demo();
+
+    terminal_write("\n[9/10] RAM-Disk Filesystem...");
     fs_run_demo();
+
+    terminal_write("\n[10/10] System Call Mechanism (int $0x80)...");
+    syscall_run_demo();
 
     terminal_write("\n========================================\n");
     terminal_write("  ALL ALGORITHM TESTS COMPLETED: PASS   \n");
@@ -210,6 +230,12 @@ static void execute_command(void)
     else if (cmd_match(command, "paging")) {
         page_replace_run_demo();
     }
+    else if (cmd_match(command, "fit") || cmd_match(command, "memfit")) {
+        mem_fit_run_demo();
+    }
+    else if (cmd_match(command, "alloc") || cmd_match(command, "filealloc")) {
+        file_alloc_run_demo();
+    }
     else if (cmd_match(command, "ipc")) {
         demo_ipc();
     }
@@ -218,12 +244,19 @@ static void execute_command(void)
     }
     else if (cmd_match(command, "deadlock") || cmd_match(command, "banker")) {
         banker_run_demo();
+        deadlock_run_demo();
+    }
+    else if (cmd_match(command, "detect")) {
+        deadlock_run_demo();
     }
     else if (cmd_match(command, "disk")) {
         disk_sched_run_demo();
     }
     else if (cmd_match(command, "files") || cmd_match(command, "fs")) {
         fs_run_demo();
+    }
+    else if (cmd_match(command, "syscall")) {
+        syscall_run_demo();
     }
     else if (cmd_match(command, "ai")) {
         print_ai_status();

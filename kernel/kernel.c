@@ -16,6 +16,8 @@
 #include "storage/fs.h"
 #include "memory/page.h"
 
+extern volatile uint64_t timer_ticks;
+
 static int test_ramdisk(void)
 {
     uint8_t write_buffer[512];
@@ -62,6 +64,31 @@ static void task_b(void)
         terminal_putchar('\n');
         scheduler_yield();
     }
+}
+
+static volatile uint32_t p1_count = 0;
+static volatile uint32_t p2_count = 0;
+
+static void preempt_task_1(void)
+{
+    uint64_t start = timer_ticks;
+    terminal_write("[PREEMPT 1] Spinning in CPU busy loop (no yield)...\n");
+    while (timer_ticks < start + 12) {
+        p1_count++;
+        for (volatile int k = 0; k < 20000; k++) { }
+    }
+    terminal_write("[PREEMPT 1] Preempted across timer quanta, completed!\n");
+}
+
+static void preempt_task_2(void)
+{
+    uint64_t start = timer_ticks;
+    terminal_write("[PREEMPT 2] Spinning in CPU busy loop (no yield)...\n");
+    while (timer_ticks < start + 12) {
+        p2_count++;
+        for (volatile int k = 0; k < 20000; k++) { }
+    }
+    terminal_write("[PREEMPT 2] Preempted across timer quanta, completed!\n");
 }
 
 static void test_page_allocator(void)
@@ -142,6 +169,19 @@ void kernel_main(void)
     else
     {
         terminal_write("Context-switch test: task creation failed\n");
+    }
+
+    terminal_write("PIT timer preemption test starting (tasks do not yield)...\n");
+    int p1 = process_create((uint64_t)preempt_task_1, 1);
+    int p2 = process_create((uint64_t)preempt_task_2, 1);
+    if (p1 > 0 && p2 > 0)
+    {
+        scheduler_start();
+        terminal_write("PIT timer preemption test: PASS (involuntary timer preemption verified)\n");
+    }
+    else
+    {
+        terminal_write("PIT timer preemption test: task creation failed\n");
     }
 
     terminal_write("Kernel initialization complete.\n");

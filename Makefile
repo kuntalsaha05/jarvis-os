@@ -32,6 +32,9 @@ OBJECTS = \
 	build/sched_sim.o \
 	build/page_replace.o \
 	build/banker.o \
+	build/deadlock.o \
+	build/mem_fit.o \
+	build/file_alloc.o \
 	build/disk_sched.o \
 	build/terminal.o \
 	build/keyboard.o \
@@ -116,6 +119,15 @@ build/page_replace.o: kernel/algorithms/page_replace.c | build
 build/banker.o: kernel/algorithms/banker.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
+build/deadlock.o: kernel/algorithms/deadlock.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/mem_fit.o: kernel/algorithms/mem_fit.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/file_alloc.o: kernel/algorithms/file_alloc.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
 build/disk_sched.o: kernel/algorithms/disk_sched.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
@@ -138,7 +150,7 @@ run-headless: $(ISO)
 
 test:
 	mkdir -p build
-	gcc -O2 -Wall -Wextra -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/disk_sched.c -o build/host_tests
+	gcc -O2 -Wall -Wextra -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c -o build/host_tests
 	./build/host_tests
 
 test-ai:
