@@ -13,6 +13,7 @@
 #include "shell/shell.h"
 #include "storage/ramdisk.h"
 #include "storage/block.h"
+#include "storage/fs.h"
 #include "memory/page.h"
 
 static int test_ramdisk(void)
@@ -103,6 +104,7 @@ void kernel_main(void)
     if (ramdisk_result == 0)
     {
         terminal_write("PASS\n");
+        fs_init();
     }
     else
     {

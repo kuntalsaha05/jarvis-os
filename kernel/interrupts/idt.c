@@ -7,22 +7,25 @@ extern void page_fault_stub(void);
 extern void terminal_write(const char *text);
 extern void interrupt_stub(void);
 extern void timer_stub(void);
-extern void page_fault_stub(void);
+extern void schedule_stub(void);
+extern void generic_exception_stub(void);
 
 void interrupt_handler(void)
 {
 }
 
-volatile uint64_t timer_ticks = 0;
-
-void timer_handler(void)
+__attribute__((noreturn))
+void generic_exception_handler(uint64_t *frame)
 {
-    timer_ticks++;
-
-    scheduler_tick();
-
-    pic_send_eoi(0);
+    (void)frame;
+    __asm__ volatile ("cli");
+    terminal_write("\n[JARVIS-OS] FATAL CPU EXCEPTION OCCURRED. HALTED.\n");
+    for (;;) {
+        __asm__ volatile ("hlt");
+    }
 }
+
+volatile uint64_t timer_ticks = 0;
 
 struct idt_entry
 {
@@ -122,6 +125,19 @@ void idt_init(void)
         idt[i].reserved = 0;
     }
     
+    for (int i = 0; i < 32; i++)
+    {
+        if (i != 14)
+        {
+            idt_set_gate(
+                (uint8_t)i,
+                (uint64_t)generic_exception_stub,
+                0x08,
+                0x8E
+            );
+        }
+    }
+
     idt_set_gate(
         14,
         (uint64_t)page_fault_stub,
@@ -130,10 +146,17 @@ void idt_init(void)
     );
 
     idt_set_gate(
-    	32,
-    	(uint64_t)timer_stub,
-    	0x08,
-    	0x8E
+        32,
+        (uint64_t)timer_stub,
+        0x08,
+        0x8E
+    );
+
+    idt_set_gate(
+        0x81,
+        (uint64_t)schedule_stub,
+        0x08,
+        0x8E
     );
 
     idt_descriptor.limit = sizeof(idt) - 1;

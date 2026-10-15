@@ -43,20 +43,30 @@ int process_create(uint64_t entry_point, uint32_t priority)
 
         uintptr_t top =
             (uintptr_t)&process_stacks[i][PROCESS_STACK_SIZE];
-        top &= ~(uintptr_t)0xF;
+        top = (top & ~(uintptr_t)0xF) - 8;
 
-        uint64_t *sp = (uint64_t *)top;
+        /*
+         * x86-64 IRETQ stack layout:
+         * frame[0..14] = 15 GPRs (r15..rax)
+         * frame[15]    = RIP
+         * frame[16]    = CS (0x08)
+         * frame[17]    = RFLAGS (0x202, IF=1)
+         * frame[18]    = RSP (top)
+         * frame[19]    = SS (0x10)
+         */
+        uint64_t *frame =
+            (uint64_t *)(top - 20 * sizeof(uint64_t));
+        for (uint32_t j = 0; j < 20; j++)
+            frame[j] = 0;
 
-        /* Initial stack layout consumed by context_switch(). */
-        *--sp = (uint64_t)process_task_trampoline;
-        *--sp = 0; /* rbx */
-        *--sp = 0; /* rbp */
-        *--sp = 0; /* r12 */
-        *--sp = 0; /* r13 */
-        *--sp = 0; /* r14 */
-        *--sp = 0; /* r15 */
+        frame[15] = (uint64_t)(uintptr_t)process_task_trampoline;
+        frame[16] = 0x08;
+        frame[17] = 0x202;
+        frame[18] = (uint64_t)top;
+        frame[19] = 0x10;
 
-        p->saved_rsp = (uint64_t)(uintptr_t)sp;
+        p->interrupt_frame = frame;
+        p->saved_rsp = (uint64_t)(uintptr_t)frame;
         return (int)p->pid;
     }
 

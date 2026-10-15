@@ -35,14 +35,77 @@ void terminal_clear(void)
     terminal_column = 0;
 }
 
+static inline void outb(uint16_t port, uint8_t value)
+{
+    __asm__ volatile ("outb %0, %1" : : "a"(value), "Nd"(port));
+}
+
+static inline uint8_t inb(uint16_t port)
+{
+    uint8_t value;
+    __asm__ volatile ("inb %1, %0" : "=a"(value) : "Nd"(port));
+    return value;
+}
+
+static void serial_init(void)
+{
+    outb(0x3F9, 0x00);    /* Disable all interrupts */
+    outb(0x3FB, 0x80);    /* Enable DLAB (set baud rate divisor) */
+    outb(0x3F8, 0x03);    /* Set divisor to 3 (lo byte) 38400 baud */
+    outb(0x3F9, 0x00);    /*                  (hi byte) */
+    outb(0x3FB, 0x03);    /* 8 bits, no parity, one stop bit */
+    outb(0x3FA, 0xC7);    /* Enable FIFO, clear them, with 14-byte threshold */
+    outb(0x3FC, 0x0B);    /* IRQs enabled, RTS/DSR set */
+}
+
+static void serial_putchar(char c)
+{
+    /* Output to QEMU/Bochs debug port 0xE9 directly */
+    outb(0xE9, (uint8_t)c);
+
+    /* Output to COM1 serial port */
+    for (int i = 0; i < 10000; i++)
+    {
+        if (inb(0x3FD) & 0x20)
+            break;
+    }
+    outb(0x3F8, (uint8_t)c);
+}
+
 void terminal_initialize(void)
 {
+    serial_init();
     terminal_set_color(0x07);
     terminal_clear();
 }
 
+static void terminal_scroll(void)
+{
+    for (uint32_t row = 0; row < VGA_HEIGHT - 1; row++)
+    {
+        for (uint32_t col = 0; col < VGA_WIDTH; col++)
+        {
+            vga_buffer[row * VGA_WIDTH + col] =
+                vga_buffer[(row + 1) * VGA_WIDTH + col];
+        }
+    }
+
+    for (uint32_t col = 0; col < VGA_WIDTH; col++)
+    {
+        vga_buffer[(VGA_HEIGHT - 1) * VGA_WIDTH + col] =
+            vga_entry(' ', terminal_color);
+    }
+    terminal_row = VGA_HEIGHT - 1;
+}
+
 void terminal_putchar(char c)
 {
+    if (c == '\n')
+    {
+        serial_putchar('\r');
+    }
+    serial_putchar(c);
+
     if (c == '\b')
     {
         if (terminal_column > 0)
@@ -68,6 +131,10 @@ void terminal_putchar(char c)
         {
             terminal_row++;
         }
+        else
+        {
+            terminal_scroll();
+        }
 
         return;
     }
@@ -84,6 +151,10 @@ void terminal_putchar(char c)
         if (terminal_row < VGA_HEIGHT - 1)
         {
             terminal_row++;
+        }
+        else
+        {
+            terminal_scroll();
         }
     }
 }

@@ -3,9 +3,10 @@
 
 .global interrupt_stub
 .global timer_stub
+.global schedule_stub
 
 .extern interrupt_handler
-.extern timer_handler
+.extern scheduler_interrupt
 
 .macro SAVE_REGISTERS
     pushq %rax
@@ -58,12 +59,34 @@ interrupt_stub:
 timer_stub:
     cld
     SAVE_REGISTERS
-
-    movq %rsp, %r12
+    movq %rsp, %rdi
+    movq $1, %rsi
     andq $-16, %rsp
-    call timer_handler
-    movq %r12, %rsp
+    call scheduler_interrupt
+    movq %rax, %rsp
+    RESTORE_REGISTERS
+    iretq
 
+schedule_stub:
+    cld
+    SAVE_REGISTERS
+    movq %rsp, %rdi
+    xorq %rsi, %rsi
+    andq $-16, %rsp
+    call scheduler_interrupt
+    movq %rax, %rsp
+    RESTORE_REGISTERS
+    iretq
+
+.global generic_exception_stub
+.extern generic_exception_handler
+
+generic_exception_stub:
+    cld
+    SAVE_REGISTERS
+    movq %rsp, %rdi
+    andq $-16, %rsp
+    call generic_exception_handler
     RESTORE_REGISTERS
     iretq
 

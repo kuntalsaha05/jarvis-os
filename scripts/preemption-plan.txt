@@ -1,0 +1,24 @@
+JARVIS-OS TIMER PREEMPTION IMPLEMENTATION
+
+Baseline:
+- Branch: preemption-dev
+- Cooperative scheduler builds successfully.
+- Bootable ISO builds successfully.
+- Original cooperative context switching is preserved.
+
+Implementation stages:
+1. Add interrupt-frame storage to each process.
+2. Create initial task interrupt frames.
+3. Implement scheduler_interrupt() for startup, timer ticks,
+   voluntary yield, task termination, and returning to the kernel.
+4. Add the software scheduling interrupt to the IDT.
+5. Update timer and software-interrupt assembly stubs.
+6. Build the kernel and ISO.
+7. Boot in QEMU and test CPU-bound tasks under Round Robin.
+8. Preserve rollback files until the QEMU test passes.
+
+Rules:
+- Do not enable preemption before all dependent components compile.
+- Back up each modified source file.
+- Run make after each implementation stage.
+- Never overwrite the known-good baseline backup.

@@ -120,6 +120,15 @@ char keyboard_read_char(void)
 {
     while (1)
     {
+        /* Check serial COM1 port (LSR bit 0: Data Ready) */
+        if (inb(0x3FD) & 0x01)
+        {
+            char c = (char)inb(0x3F8);
+            if (c == '\r')
+                c = '\n';
+            return c;
+        }
+
         uint8_t status = inb(STATUS_PORT);
 
         if ((status & 0x01) == 0)
