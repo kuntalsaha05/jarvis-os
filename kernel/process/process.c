@@ -39,6 +39,7 @@ int process_create(uint64_t entry_point, uint32_t priority)
         p->cpu_time = 0;
         p->entry_point = entry_point;
         p->context = (cpu_context_t){0};
+        p->interrupt_frame = NULL;
 
         uintptr_t top =
             (uintptr_t)&process_stacks[i][PROCESS_STACK_SIZE];
@@ -91,6 +92,7 @@ int process_terminate(uint32_t pid)
     p->state = PROCESS_TERMINATED;
     p->context = (cpu_context_t){0};
     p->saved_rsp = 0;
+    p->interrupt_frame = NULL;
     p->entry_point = 0;
 
     return 0;

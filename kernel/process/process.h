@@ -30,6 +30,7 @@ typedef struct {
     uint64_t cpu_time;
     uint64_t entry_point;
     uint64_t saved_rsp;
+    uint64_t *interrupt_frame;
 } process_t;
 
 void process_init(void);
