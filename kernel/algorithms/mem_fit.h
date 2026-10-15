@@ -41,3 +41,4 @@ void mem_fit_worst(const uint32_t *blocks, uint32_t block_count, const uint32_t 
 void mem_fit_run_demo(void);
 
 #endif /* MEM_FIT_H */
+

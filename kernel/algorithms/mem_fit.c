@@ -220,3 +220,4 @@ void mem_fit_run_demo(void)
     mem_fit_worst(partitions, 5, requests, 4, &res);
     print_fit_table("Worst Fit", &res);
 }
+

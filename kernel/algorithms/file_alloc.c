@@ -235,3 +235,4 @@ void file_alloc_run_demo(void)
     terminal_write("Linked       Fast               Slow O(N)      None           Pointer per block\n");
     terminal_write("Indexed      Fast               Fast O(1)      None           1 Index block\n");
 }
+

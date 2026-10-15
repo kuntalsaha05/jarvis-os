@@ -1,7 +1,11 @@
 build/
 *.o
 *.iso
+*.bin
 __pycache__/
 *.pyc
 .venv/
 venv/
+backups/
+logs/
+*.log
