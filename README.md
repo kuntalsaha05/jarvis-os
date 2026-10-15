@@ -107,6 +107,7 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 | `help` | Display list of available commands |
 | `status` | Show kernel state, uptime ticks, context switches, preemptions, and free pages |
 | `ticks` | Display current PIT timer tick counter |
+| `irq` | Display interrupt subsystem status (IRQ0/1, IDT gates 0x20/0x21/0x80/0x81) |
 | `process` / `threads` / `ps` | Display process table, thread states, priorities, and stacks |
 | `scheduler` | Display Round-Robin quantum and scheduler statistics |
 | `memory` | Display physical page allocator statistics and available frames |
@@ -133,6 +134,7 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 ## Documentation
 
 Detailed technical architecture and design docs are available in `docs/`:
+- [`docs/PHASE2_VERIFICATION.md`](docs/PHASE2_VERIFICATION.md): Phase 2 hardware, interrupt, and IRQ1 verification report.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): Comprehensive system architecture and interrupt flow.
 - [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md): 28-point feature status tracker with verified evidence.
 - [`docs/BUILD_AND_RUN.md`](docs/BUILD_AND_RUN.md): Build targets, toolchains, and QEMU options.

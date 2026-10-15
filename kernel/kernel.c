@@ -178,12 +178,27 @@ void kernel_main(uint64_t magic, uint64_t mb_info_addr)
     }
 
     terminal_write("PIT timer preemption test starting (tasks do not yield)...\n");
+    scheduler_stats_t stats_pre;
+    scheduler_get_stats(&stats_pre);
+    p1_count = 0;
+    p2_count = 0;
+
     int p1 = process_create((uint64_t)preempt_task_1, 1);
     int p2 = process_create((uint64_t)preempt_task_2, 1);
     if (p1 > 0 && p2 > 0)
     {
         scheduler_start();
-        terminal_write("PIT timer preemption test: PASS (involuntary timer preemption verified)\n");
+        scheduler_stats_t stats_post;
+        scheduler_get_stats(&stats_post);
+
+        if (p1_count > 0 && p2_count > 0 && stats_post.quantum_preemptions > stats_pre.quantum_preemptions)
+        {
+            terminal_write("PIT timer preemption test: PASS (involuntary timer preemption verified)\n");
+        }
+        else
+        {
+            terminal_write("PIT timer preemption test: FAIL (preemption condition not met)\n");
+        }
     }
     else
     {

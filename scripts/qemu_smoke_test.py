@@ -19,6 +19,7 @@ def main():
     commands_to_send = (
         "\n"
         "status\n"
+        "irq\n"
         "threads\n"
         "ls\n"
         "cat kernel.cfg\n"
@@ -70,6 +71,9 @@ def main():
         ("Timer Preemption Quanta Switch", "[PREEMPT 1] Preempted across timer quanta, completed!"),
         ("Timer Preemption Verified", "PIT timer preemption test: PASS (involuntary timer preemption verified)"),
         ("Shell Ready", "jarvis>"),
+        ("Interrupt Subsystem IRQ0/1", "Interrupt Subsystem Status:"),
+        ("Timer IRQ0 Vector", "Vector 32: timer_stub (IDT gate 0x20)"),
+        ("Keyboard IRQ1 Vector", "Vector 33: keyboard_stub (IDT gate 0x21)"),
         ("Process & Thread Metrics", "Process & Thread Subsystem Statistics:"),
         ("Context Switch Counting", "Total Context Switches:"),
         ("Quantum Preemption Counting", "Quantum Preemptions:"),

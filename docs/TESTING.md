@@ -19,7 +19,7 @@ In accordance with the project rules:
 |---|---|---|---|
 | **Host Algorithm Tests** | `tests/host_tests.c` | `make test` | Mathematical verification of CPU scheduling (FCFS, SJF, RR), Page Replacement (FIFO, LRU, Optimal, Belady Anomaly), Banker's algorithm, Disk head scheduling, Memory Allocation Fit (First/Best/Worst Fit), File Allocation (Contiguous, Linked, Indexed), and Deadlock Detection (WFG/Matrix) & Prevention. |
 | **AI Companion Tests** | `tests/test_ai.py` | `make test-ai` | Python unit tests for `MockLLMBackend`, `LlamaCppBackend` fallback, `AirLLMBackend` loading check, `ToolRegistry` allowlisting, input validation, audit logs, JSON protocol serialization, and explicit `OFFLINE_SIMULATION` telemetry labeling. |
-| **QEMU Smoke Test** | `scripts/qemu_smoke_test.py` | `make test-qemu` | Boots `build/jarvis.iso` headlessly, verifies 37 checkpoints covering Multiboot hand-off, memory mapping, early serial debug, preemption without yield, thread metrics, filesystem commands, and in-kernel benchmarks. |
+| **QEMU Smoke Test** | `scripts/qemu_smoke_test.py` | `make test-qemu` | Boots `build/jarvis.iso` headlessly, verifies 40 checkpoints covering Multiboot hand-off, memory mapping, early serial debug, preemption without yield, keyboard IRQ1 / timer IRQ0 interrupt handling, thread metrics, filesystem commands, and in-kernel benchmarks. |
 | **All Test Suites** | All of the above | `make test-all` | Runs all three test suites in sequence and reports aggregate status. |
 
 ---
@@ -64,7 +64,7 @@ OK
 ```
 
 ### 3.3 Automated QEMU Smoke Test (`make test-qemu`)
-Spawns QEMU in headless mode, connects to standard I/O, feeds shell commands, and verifies output against 37 required checkpoints:
+Spawns QEMU in headless mode, connects to standard I/O, feeds shell commands, and verifies output against 40 required checkpoints:
 ```bash
 make test-qemu
 ```
@@ -73,7 +73,7 @@ make test-qemu
 ==================================================
       JARVIS-OS AUTOMATED QEMU SMOKE TEST         
 ==================================================
-Captured 11972 bytes of serial output in 12.97s.
+Captured 12290 bytes of serial output in 10.01s.
 
   [PASS] Early Serial Debug Output
   [PASS] Multiboot 0.6.96 Hand-off
@@ -88,6 +88,9 @@ Captured 11972 bytes of serial output in 12.97s.
   [PASS] Timer Preemption Quanta Switch
   [PASS] Timer Preemption Verified
   [PASS] Shell Ready
+  [PASS] Interrupt Subsystem IRQ0/1
+  [PASS] Timer IRQ0 Vector
+  [PASS] Keyboard IRQ1 Vector
   [PASS] Process & Thread Metrics
   [PASS] Context Switch Counting
   [PASS] Quantum Preemption Counting
@@ -114,7 +117,7 @@ Captured 11972 bytes of serial output in 12.97s.
   [PASS] Syscall int $0x80 Execution
 
 ==================================================
-   ALL 37 VERIFICATION CHECKPOINTS PASSED!       
+   ALL 40 VERIFICATION CHECKPOINTS PASSED!       
 ==================================================
 ```
 

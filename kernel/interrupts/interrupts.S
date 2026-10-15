@@ -78,11 +78,25 @@ schedule_stub:
     RESTORE_REGISTERS
     iretq
 
+.global keyboard_stub
+.extern keyboard_handler
+
+keyboard_stub:
+    cld
+    SAVE_REGISTERS
+    movq %rsp, %r12
+    andq $-16, %rsp
+    call keyboard_handler
+    movq %r12, %rsp
+    RESTORE_REGISTERS
+    iretq
+
 .global syscall_stub
 .extern syscall_dispatch
 
 syscall_stub:
     cld
+
     SAVE_REGISTERS
 
     movq 112(%rsp), %rdi    # syscall number (saved rax)

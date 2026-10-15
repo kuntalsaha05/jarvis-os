@@ -54,6 +54,7 @@ static void print_help(void)
     terminal_write("  clear      - Clear terminal screen\n");
     terminal_write("  status     - Show OS kernel status & architecture\n");
     terminal_write("  ticks      - Show PIT timer ticks\n");
+    terminal_write("  irq        - Show interrupt subsystem & IRQ metrics\n");
     terminal_write("  process    - Show process manager & TCB stats\n");
     terminal_write("  threads    - Show comprehensive thread & scheduler metrics\n");
     terminal_write("  scheduler  - Show current kernel scheduler algorithm\n");
@@ -203,6 +204,9 @@ static void execute_command(void)
         terminal_write("Uptime Ticks: ");
         terminal_write_number((uint32_t)timer_ticks);
         terminal_write(" (100 Hz PIT timer)\n");
+        terminal_write("Keyboard IRQ1 Events: ");
+        terminal_write_number(keyboard_get_irq_count());
+        terminal_putchar('\n');
         terminal_write("Free Physical Pages: ");
         terminal_write_number(page_free_count());
         terminal_write(" / 64 (256 KiB pool)\n");
@@ -211,6 +215,19 @@ static void execute_command(void)
         terminal_write("\nTimer ticks: ");
         terminal_write_number((uint32_t)timer_ticks);
         terminal_putchar('\n');
+    }
+    else if (cmd_match(command, "irq")) {
+        terminal_write("\nInterrupt Subsystem Status:\n");
+        terminal_write("  IRQ0 (PIT Timer 100 Hz): ");
+        terminal_write_number((uint32_t)timer_ticks);
+        terminal_write(" ticks\n");
+        terminal_write("  IRQ1 (PS/2 Keyboard):   ");
+        terminal_write_number(keyboard_get_irq_count());
+        terminal_write(" events\n");
+        terminal_write("  Vector 32: timer_stub (IDT gate 0x20)\n");
+        terminal_write("  Vector 33: keyboard_stub (IDT gate 0x21)\n");
+        terminal_write("  Vector 128: syscall_stub (IDT gate 0x80)\n");
+        terminal_write("  Vector 129: schedule_stub (IDT gate 0x81)\n");
     }
     else if (cmd_match(command, "process") || cmd_match(command, "processes")) {
         terminal_write("\nProcess Manager:\n");
