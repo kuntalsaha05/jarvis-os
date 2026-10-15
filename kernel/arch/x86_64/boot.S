@@ -18,6 +18,8 @@
 
 _start:
     cli
+    movl %eax, multiboot_magic
+    movl %ebx, multiboot_info_ptr
 
     # PML4[0] -> PDPT
     mov $pml4_table, %eax
@@ -73,6 +75,9 @@ long_mode_start:
 
     mov $stack_top, %rsp
 
+    movl multiboot_magic(%rip), %edi
+    movl multiboot_info_ptr(%rip), %esi
+
     call kernel_main
 
 hang:
@@ -116,3 +121,12 @@ pdpt_table:
 
 pd_table:
 .skip 4096
+
+.align 4
+.global multiboot_magic
+.global multiboot_info_ptr
+multiboot_magic:
+.long 0
+
+multiboot_info_ptr:
+.long 0

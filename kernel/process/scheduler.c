@@ -10,6 +10,8 @@ static uint64_t *bootstrap_frame;
 static int scheduler_started;
 static uint32_t rr_cursor;
 static uint32_t quantum_ticks;
+static uint32_t rr_quantum = SCHEDULER_RR_QUANTUM;
+static scheduler_stats_t sched_stats = {0};
 
 void scheduler_init(void)
 {
@@ -19,6 +21,8 @@ void scheduler_init(void)
     scheduler_started = 0;
     rr_cursor = MAX_PROCESSES - 1;
     quantum_ticks = 0;
+    rr_quantum = SCHEDULER_RR_QUANTUM;
+    sched_stats = (scheduler_stats_t){0};
 }
 
 void scheduler_set_algorithm(scheduler_algorithm_t algorithm)
@@ -30,6 +34,24 @@ void scheduler_set_algorithm(scheduler_algorithm_t algorithm)
 scheduler_algorithm_t scheduler_get_algorithm(void)
 {
     return current_algorithm;
+}
+
+void scheduler_set_quantum(uint32_t quantum)
+{
+    if (quantum > 0 && quantum <= 100)
+        rr_quantum = quantum;
+}
+
+uint32_t scheduler_get_quantum(void)
+{
+    return rr_quantum;
+}
+
+void scheduler_get_stats(scheduler_stats_t *stats)
+{
+    if (!stats) return;
+    *stats = sched_stats;
+    stats->timer_ticks = timer_ticks;
 }
 
 process_t *scheduler_select_next(void)
@@ -74,6 +96,18 @@ uint64_t *scheduler_interrupt(uint64_t *frame, uint64_t from_timer)
     if (from_timer) {
         timer_ticks++;
         pic_send_eoi(0);
+        sched_stats.timer_ticks = timer_ticks;
+
+        /* Wake up sleeping processes whose sleep timeout has elapsed */
+        for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+            process_t *p = process_get_by_index(i);
+            if (p && p->state == PROCESS_BLOCKED && p->wake_tick > 0 && timer_ticks >= p->wake_tick) {
+                p->state = PROCESS_READY;
+                p->wake_tick = 0;
+            }
+        }
+    } else {
+        sched_stats.voluntary_yields++;
     }
 
     if (!scheduler_started) {
@@ -89,6 +123,7 @@ uint64_t *scheduler_interrupt(uint64_t *frame, uint64_t from_timer)
         current_process = first;
         first->state = PROCESS_RUNNING;
         quantum_ticks = 0;
+        sched_stats.context_switches++;
         return first->interrupt_frame;
     }
 
@@ -102,8 +137,10 @@ uint64_t *scheduler_interrupt(uint64_t *frame, uint64_t from_timer)
         if (current_algorithm != SCHEDULER_RR)
             return frame;
 
-        if (++quantum_ticks < SCHEDULER_RR_QUANTUM)
+        if (++quantum_ticks < rr_quantum)
             return frame;
+
+        sched_stats.quantum_preemptions++;
     }
 
     if (previous->state != PROCESS_TERMINATED) {
@@ -137,6 +174,7 @@ uint64_t *scheduler_interrupt(uint64_t *frame, uint64_t from_timer)
     current_process = next;
     next->state = PROCESS_RUNNING;
     quantum_ticks = 0;
+    sched_stats.context_switches++;
     return next->interrupt_frame;
 }
 
@@ -163,8 +201,8 @@ void process_task_trampoline(void)
 {
     process_t *p = scheduler_current_process();
     if (p != 0) {
-        void (*entry)(void) = (void (*)(void))(uintptr_t)p->entry_point;
-        entry();
+        void (*entry)(void *) = (void (*)(void *))(uintptr_t)p->entry_point;
+        entry(p->arg);
         process_terminate(p->pid);
     }
 

@@ -5,6 +5,8 @@
 
 extern volatile uint64_t timer_ticks;
 extern void process_task_trampoline(void);
+extern process_t *scheduler_current_process(void);
+extern void scheduler_yield(void);
 
 static process_t process_table[MAX_PROCESSES];
 static uint8_t process_stacks[MAX_PROCESSES][PROCESS_STACK_SIZE]
@@ -21,7 +23,7 @@ void process_init(void)
     next_pid = 1;
 }
 
-int process_create(uint64_t entry_point, uint32_t priority)
+int thread_create(uint64_t entry_point, void *arg, uint32_t priority)
 {
     if (entry_point == 0)
         return -1;
@@ -38,6 +40,8 @@ int process_create(uint64_t entry_point, uint32_t priority)
         p->creation_tick = timer_ticks;
         p->cpu_time = 0;
         p->entry_point = entry_point;
+        p->arg = arg;
+        p->wake_tick = 0;
         p->context = (cpu_context_t){0};
         p->interrupt_frame = NULL;
 
@@ -48,6 +52,7 @@ int process_create(uint64_t entry_point, uint32_t priority)
         /*
          * x86-64 IRETQ stack layout:
          * frame[0..14] = 15 GPRs (r15..rax)
+         * frame[8]     = RDI (first argument to entry_point)
          * frame[15]    = RIP
          * frame[16]    = CS (0x08)
          * frame[17]    = RFLAGS (0x202, IF=1)
@@ -59,6 +64,7 @@ int process_create(uint64_t entry_point, uint32_t priority)
         for (uint32_t j = 0; j < 20; j++)
             frame[j] = 0;
 
+        frame[8] = (uint64_t)(uintptr_t)arg;
         frame[15] = (uint64_t)(uintptr_t)process_task_trampoline;
         frame[16] = 0x08;
         frame[17] = 0x202;
@@ -71,6 +77,11 @@ int process_create(uint64_t entry_point, uint32_t priority)
     }
 
     return -1;
+}
+
+int process_create(uint64_t entry_point, uint32_t priority)
+{
+    return thread_create(entry_point, NULL, priority);
 }
 
 process_t *process_get(uint32_t pid)
@@ -104,6 +115,8 @@ int process_terminate(uint32_t pid)
     p->saved_rsp = 0;
     p->interrupt_frame = NULL;
     p->entry_point = 0;
+    p->arg = NULL;
+    p->wake_tick = 0;
 
     return 0;
 }
@@ -119,6 +132,27 @@ int process_set_state(uint32_t pid, process_state_t state)
     return 0;
 }
 
+int process_block(uint32_t pid)
+{
+    return process_set_state(pid, PROCESS_BLOCKED);
+}
+
+int process_unblock(uint32_t pid)
+{
+    return process_set_state(pid, PROCESS_READY);
+}
+
+int process_sleep(uint64_t ticks)
+{
+    process_t *p = scheduler_current_process();
+    if (!p) return -1;
+
+    p->wake_tick = timer_ticks + ticks;
+    p->state = PROCESS_BLOCKED;
+    scheduler_yield();
+    return 0;
+}
+
 uint32_t process_get_count(void)
 {
     uint32_t count = 0;
@@ -129,4 +163,36 @@ uint32_t process_get_count(void)
     }
 
     return count;
+}
+
+void process_get_stats(process_stats_t *stats)
+{
+    if (!stats) return;
+    stats->total_count = 0;
+    stats->ready_count = 0;
+    stats->running_count = 0;
+    stats->blocked_count = 0;
+    stats->terminated_count = 0;
+
+    for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+        switch (process_table[i].state) {
+            case PROCESS_READY:
+                stats->ready_count++;
+                stats->total_count++;
+                break;
+            case PROCESS_RUNNING:
+                stats->running_count++;
+                stats->total_count++;
+                break;
+            case PROCESS_BLOCKED:
+                stats->blocked_count++;
+                stats->total_count++;
+                break;
+            case PROCESS_TERMINATED:
+                stats->terminated_count++;
+                break;
+            default:
+                break;
+        }
+    }
 }

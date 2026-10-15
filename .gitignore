@@ -9,3 +9,5 @@ venv/
 backups/
 logs/
 *.log
+preemption-*.txt
+prepare-preemption.sh

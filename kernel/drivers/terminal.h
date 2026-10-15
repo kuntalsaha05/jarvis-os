@@ -8,6 +8,7 @@ void terminal_clear(void);
 void terminal_putchar(char c);
 void terminal_write(const char *str);
 void terminal_write_number(uint32_t number);
+void terminal_write_hex(uint32_t number);
 void terminal_set_color(uint8_t color);
 
 void terminal_write_at(

@@ -46,8 +46,9 @@ graph TD
 ## 2. Boot Sequence and CPU Initialization
 
 ### 2.1 Multiboot Hand-off and Long Mode Transition
-1. **GRUB Stage**: GRUB loads `build/jarvis.bin` based on the Multiboot header in `kernel/arch/x86_64/boot.S`.
+1. **GRUB Stage**: GRUB loads `build/jarvis.bin` based on the Multiboot header in `kernel/arch/x86_64/boot.S`. GRUB supplies magic `0x2BADB002` in `%eax` and the physical address of the `multiboot_info_t` struct in `%ebx`.
 2. **Protected Mode (`.code32`)**:
+   - Preserves `%eax` and `%ebx` in kernel variables `multiboot_magic` and `multiboot_info_ptr` before registers are reused.
    - Disables CPU interrupts (`cli`).
    - Sets up initial 4-level paging structures (`pml4_table`, `pdpt_table`, `pd_table`).
    - Identity-maps the first 2 MiB of physical memory using a huge page (`0x83` flags: Present + Writable + Huge).
@@ -60,15 +61,20 @@ graph TD
 3. **Long Mode Entry (`.code64`)**:
    - Reloads data segment registers (`%ds`, `%es`, `%ss`) with selector `0x10`.
    - Sets the kernel stack pointer to `stack_top` (16 KiB reserved stack).
-   - Calls `kernel_main()` in `kernel/kernel.c`.
+   - Loads `multiboot_magic(%rip)` into `%rdi` and `multiboot_info_ptr(%rip)` into `%rsi` to satisfy the System V AMD64 calling convention.
+   - Calls `kernel_main(magic, mb_info_addr)` in `kernel/kernel.c`.
+4. **Early Debug & Memory Discovery**:
+   - `debug_early_init()` configures COM1 and debug port `0xE9` before terminal or interrupt initialization, enabling crash reporting even if VGA fails.
+   - `multiboot_init(magic, addr)` parses memory map tags, discovers physical RAM boundaries (e.g. 255 MiB in QEMU), and logs BIOS/GRUB memory map regions.
 
 ---
 
 ## 3. Interrupts, Exceptions, and Frame Correctness
 
-### 3.1 Interrupt Descriptor Table (IDT)
+### 3.1 Interrupt Descriptor Table (IDT) & Kernel Panic
 - The IDT contains 256 16-byte gates loaded via `lidt`.
-- CPU exception gates `0..31` are hooked to `generic_exception_stub` (with vector 14 routed to `page_fault_stub`). This ensures any CPU fault (such as #GP, #SS, or #UD) outputs diagnostic text and halts safely, preventing silent triple-faults.
+- CPU exception gates `0..31` are hooked to `generic_exception_stub` (with vector 14 routed to `page_fault_stub`). This ensures any CPU fault (such as #GP, #SS, or #UD) outputs diagnostic text, calls `kernel_panic`, and halts safely, preventing silent triple-faults.
+- `kernel_panic(message)` disables interrupts, emits diagnostic messages to early serial/0xE9, reads `CR2`, `CR3`, and `RSP` registers, paints a high-contrast red alert banner to the VGA text buffer (`0xB8000`), and halts the CPU with `cli; hlt`.
 - Vector `32` (IRQ0) is hooked to `timer_stub` for 100 Hz timer preemption.
 - Vector `0x81` is hooked to `schedule_stub` for cooperative task yielding.
 
@@ -87,7 +93,7 @@ The assembly stub macro `SAVE_REGISTERS` pushes 15 general-purpose registers:
 `%rax, %rbx, %rcx, %rdx, %rbp, %rsi, %rdi, %r8, %r9, %r10, %r11, %r12, %r13, %r14, %r15` (120 bytes).
 
 Thus, the saved interrupt frame contains exactly **20 quadwords (160 bytes)**:
-- `frame[0..14]`: 15 GPRs
+- `frame[0..14]`: 15 GPRs (with `frame[8]` representing `%rdi`, used for thread argument passing)
 - `frame[15]`: RIP
 - `frame[16]`: CS (`0x08`)
 - `frame[17]`: RFLAGS (`0x202`)
@@ -98,18 +104,21 @@ When `RESTORE_REGISTERS` pops 15 quadwords, `%rsp` is positioned precisely at `f
 
 ---
 
-## 4. Process Scheduling Architecture
+## 4. Process & Thread Scheduling Architecture
 
-### 4.1 Process Control Block (`process_t`)
-Each process is represented by a control block containing:
-- Process ID (`pid`) and execution state (`PROCESS_NEW`, `PROCESS_READY`, `PROCESS_RUNNING`, `PROCESS_BLOCKED`, `PROCESS_TERMINATED`).
-- Priority, creation tick, and accumulated CPU time.
+### 4.1 Process Control Block (`process_t`) & Threads
+Each process or thread is represented by a control block containing:
+- Process ID (`pid`), thread state (`PROCESS_NEW`, `PROCESS_READY`, `PROCESS_RUNNING`, `PROCESS_BLOCKED`, `PROCESS_TERMINATED`), and priority.
+- Target `wake_tick` for timer-driven sleep wakeups.
 - Dedicated 4096-byte kernel stack (`process_stacks[i]`).
 - Pointer to saved interrupt frame (`interrupt_frame`).
+- `thread_create(entry_point, arg, priority)` initializes a thread sharing the kernel address space, placing `arg` directly into `%rdi` (`frame[8]`) according to the System V AMD64 ABI.
+- `process_sleep(ticks)` sets `wake_tick = timer_ticks + ticks` and transitions the thread to `PROCESS_BLOCKED`.
 
-### 4.2 Preemptive vs Cooperative Switching
-- **Cooperative**: A task invokes `scheduler_yield()`, which triggers software interrupt `int $0x81`. `schedule_stub` saves registers, invokes `scheduler_interrupt(frame, 0)`, updates state to `PROCESS_READY`, selects the next runnable task, and restores the new frame via `iretq`.
-- **Preemptive**: The PIT timer fires IRQ0 at 100 Hz. `timer_stub` increments `timer_ticks`, acknowledges the PIC (`pic_send_eoi(0)`), and checks quantum expiration (`SCHEDULER_RR_QUANTUM = 5` ticks). When the quantum expires, a context switch is performed to the next task.
+### 4.2 Preemptive vs Cooperative Switching & Metrics
+- **Cooperative**: A task invokes `scheduler_yield()`, which triggers software interrupt `int $0x81`. `schedule_stub` saves registers, invokes `scheduler_interrupt(frame, 0)`, updates state to `PROCESS_READY`, selects the next runnable task, and restores the new frame via `iretq`. Increments `voluntary_yields`.
+- **Preemptive**: The PIT timer fires IRQ0 at 100 Hz. `timer_stub` increments `timer_ticks`, acknowledges the PIC (`pic_send_eoi(0)`), sweeps sleeping tasks to awaken those whose `wake_tick <= timer_ticks`, and checks quantum expiration (`SCHEDULER_RR_QUANTUM = 5` ticks by default, configurable via `scheduler_set_quantum`). Increments `quantum_preemptions`.
+- **Instrumentation**: `scheduler_stats_t` tracks `context_switches`, `quantum_preemptions`, `voluntary_yields`, and `timer_ticks`, inspectable via shell commands `status`, `sched`, and `threads`.
 - **Clean Bootstrap Return**: When all tasks terminate, the scheduler detects `next == 0` and restores `bootstrap_frame`, cleanly returning to `kernel_main` to launch the interactive shell.
 
 ---
@@ -120,7 +129,9 @@ JARVIS-FS provides educational file storage backed by a 64 KiB RAM disk (128 sec
 - **Sector 0**: Superblock (`magic = 0x4A415256`, block count, free block count) + Block Allocation Bitmap.
 - **Sectors 1..3**: Inode Table (16 inodes, each with filename, size, and 8 direct block pointers).
 - **Sectors 4..127**: 120 Data Blocks (512 bytes each).
-- Standard operations implemented: `fs_format()`, `fs_create()`, `fs_open()`, `fs_read()`, `fs_write()`, `fs_close()`, `fs_delete()`, and directory listing `fs_list()`.
+- **Default Files**: `fs_init()` formats the disk and creates `kernel.cfg` populated with system configuration parameters (`OS=JARVIS-OS`, `VERSION=1.0-PHASE2`, `QUANTUM=5`, `SCHEDULER=ROUND_ROBIN`).
+- Standard operations implemented: `fs_format()`, `fs_create()`, `fs_open()`, `fs_read()`, `fs_write()`, `fs_close()`, `fs_delete()`, and directory listing `fs_list()`. Active file descriptors pointing to deleted inodes are automatically invalidated.
+- Shell commands: `ls` (lists file table with sizes and block counts), `cat <filename>` (reads and prints file contents directly to console).
 
 ---
 

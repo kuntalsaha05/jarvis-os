@@ -195,6 +195,19 @@ void terminal_write_number(uint32_t number)
     }
 }
 
+void terminal_write_hex(uint32_t number)
+{
+    static const char hex_digits[] = "0123456789ABCDEF";
+    char buffer[8];
+    for (int i = 7; i >= 0; i--) {
+        buffer[i] = hex_digits[number & 0xF];
+        number >>= 4;
+    }
+    for (int i = 0; i < 8; i++) {
+        terminal_putchar(buffer[i]);
+    }
+}
+
 void terminal_write_at(
     uint8_t row,
     uint8_t column,

@@ -89,7 +89,19 @@ int fs_format(void)
 
 int fs_init(void)
 {
-    return fs_format();
+    int ret = fs_format();
+    if (ret == 0) {
+        fs_create("kernel.cfg");
+        int fd = fs_open("kernel.cfg");
+        if (fd >= 0) {
+            const char *cfg = "JARVIS-OS v1.0\narch=x86-64\nscheduler=RoundRobin\nquantum=5\nai_bridge=COM1\n";
+            uint32_t len = 0;
+            while (cfg[len]) len++;
+            fs_write(fd, cfg, len);
+            fs_close(fd);
+        }
+    }
+    return ret;
 }
 
 int fs_create(const char *name)

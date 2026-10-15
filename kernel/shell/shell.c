@@ -17,6 +17,7 @@
 #include "algorithms/file_alloc.h"
 #include "algorithms/disk_sched.h"
 #include "syscall/syscall.h"
+#include "../debug.h"
 #include <stdint.h>
 
 extern volatile uint64_t timer_ticks;
@@ -33,6 +34,16 @@ static int cmd_match(const char *cmd, const char *target)
     return (*cmd == '\0' && *target == '\0');
 }
 
+static int cmd_starts_with(const char *cmd, const char *prefix)
+{
+    while (*prefix) {
+        if (*cmd != *prefix) return 0;
+        cmd++;
+        prefix++;
+    }
+    return 1;
+}
+
 static void print_help(void)
 {
     terminal_write("\n==================================================\n");
@@ -44,8 +55,13 @@ static void print_help(void)
     terminal_write("  status     - Show OS kernel status & architecture\n");
     terminal_write("  ticks      - Show PIT timer ticks\n");
     terminal_write("  process    - Show process manager & TCB stats\n");
+    terminal_write("  threads    - Show comprehensive thread & scheduler metrics\n");
     terminal_write("  scheduler  - Show current kernel scheduler algorithm\n");
     terminal_write("  memory     - Show page allocator & heap memory usage\n\n");
+    terminal_write("File Operations:\n");
+    terminal_write("  ls         - List files in JARVIS-FS directory\n");
+    terminal_write("  cat <file> - Display file content from JARVIS-FS\n");
+    terminal_write("  files      - Run JARVIS-FS Filesystem benchmark\n\n");
     terminal_write("OS Concept Demonstrations:\n");
     terminal_write("  sched      - Run CPU Scheduling Benchmark (FCFS, SJF, RR)\n");
     terminal_write("  paging     - Run Page Replacement & Belady's Anomaly demo\n");
@@ -56,8 +72,8 @@ static void print_help(void)
     terminal_write("  deadlock   - Run Banker's Deadlock Avoidance demo\n");
     terminal_write("  detect     - Run Deadlock Detection & Prevention demo\n");
     terminal_write("  disk       - Run Disk Head Scheduling (FCFS, SSTF, SCAN)\n");
-    terminal_write("  files      - Run JARVIS-FS Filesystem & directory demo\n");
     terminal_write("  syscall    - Run int $0x80 System Call Dispatch demo\n");
+    terminal_write("  panic      - Test kernel panic diagnostic handler\n");
     terminal_write("  ai         - Show AI Companion Architecture & tool allowlist\n");
     terminal_write("  tests      - Run all OS algorithmic verification tests\n");
     terminal_write("==================================================\n");
@@ -255,8 +271,72 @@ static void execute_command(void)
     else if (cmd_match(command, "files") || cmd_match(command, "fs")) {
         fs_run_demo();
     }
+    else if (cmd_match(command, "ls")) {
+        fs_list();
+    }
+    else if (cmd_starts_with(command, "cat")) {
+        const char *filename = command + 3;
+        while (*filename == ' ') filename++;
+        if (*filename == '\0') filename = "kernel.cfg";
+        int fd = fs_open(filename);
+        if (fd < 0) {
+            terminal_write("\ncat: cannot open file '");
+            terminal_write(filename);
+            terminal_write("'\n");
+        } else {
+            char buf[513];
+            int n = fs_read(fd, buf, 512);
+            terminal_write("\n--- Content of ");
+            terminal_write(filename);
+            terminal_write(" ---\n");
+            if (n > 0) {
+                buf[n] = '\0';
+                terminal_write(buf);
+                if (buf[n - 1] != '\n') terminal_putchar('\n');
+            } else {
+                terminal_write("(empty file)\n");
+            }
+            fs_close(fd);
+        }
+    }
+    else if (cmd_match(command, "threads") || cmd_match(command, "ps")) {
+        process_stats_t pstats;
+        process_get_stats(&pstats);
+        scheduler_stats_t sstats;
+        scheduler_get_stats(&sstats);
+
+        terminal_write("\nProcess & Thread Subsystem Statistics:\n");
+        terminal_write("  Total Active Processes:     ");
+        terminal_write_number(pstats.total_count);
+        terminal_write("\n  Ready Processes:            ");
+        terminal_write_number(pstats.ready_count);
+        terminal_write("\n  Running Processes:          ");
+        terminal_write_number(pstats.running_count);
+        terminal_write("\n  Blocked Processes:          ");
+        terminal_write_number(pstats.blocked_count);
+        terminal_write("\n  Terminated Slots:           ");
+        terminal_write_number(pstats.terminated_count);
+        terminal_write("\nScheduler Metrics:\n");
+        terminal_write("  Algorithm:                  ");
+        scheduler_algorithm_t algo = scheduler_get_algorithm();
+        if (algo == SCHEDULER_FCFS) terminal_write("FCFS\n");
+        else if (algo == SCHEDULER_SJF) terminal_write("SJF\n");
+        else terminal_write("Round Robin\n");
+        terminal_write("  Round-Robin Quantum:        ");
+        terminal_write_number(scheduler_get_quantum());
+        terminal_write(" ticks\n  Total Context Switches:     ");
+        terminal_write_number((uint32_t)sstats.context_switches);
+        terminal_write("\n  Quantum Preemptions:        ");
+        terminal_write_number((uint32_t)sstats.quantum_preemptions);
+        terminal_write("\n  Voluntary Yields:           ");
+        terminal_write_number((uint32_t)sstats.voluntary_yields);
+        terminal_putchar('\n');
+    }
     else if (cmd_match(command, "syscall")) {
         syscall_run_demo();
+    }
+    else if (cmd_match(command, "panic")) {
+        kernel_panic("Manual diagnostic panic triggered via shell command");
     }
     else if (cmd_match(command, "ai")) {
         print_ai_status();

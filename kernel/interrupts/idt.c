@@ -1,7 +1,7 @@
-#include <stdint.h>
 #include "idt.h"
 #include "pic.h"
 #include "process/scheduler.h"
+#include "../debug.h"
 
 extern void page_fault_stub(void);
 extern void terminal_write(const char *text);
@@ -19,11 +19,7 @@ __attribute__((noreturn))
 void generic_exception_handler(uint64_t *frame)
 {
     (void)frame;
-    __asm__ volatile ("cli");
-    terminal_write("\n[JARVIS-OS] FATAL CPU EXCEPTION OCCURRED. HALTED.\n");
-    for (;;) {
-        __asm__ volatile ("hlt");
-    }
+    kernel_panic("Fatal CPU Exception");
 }
 
 volatile uint64_t timer_ticks = 0;
@@ -106,11 +102,7 @@ void page_fault_handler(uint64_t address, uint64_t error_code)
     terminal_write((error_code & 4) ?
                    "User" : "Supervisor");
 
-    terminal_write("\nKernel halted.\n");
-
-    for (;;) {
-        __asm__ volatile ("hlt");
-    }
+    kernel_panic("Kernel Page Fault (#PF)");
 }
 
 void idt_init(void)

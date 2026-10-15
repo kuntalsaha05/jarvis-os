@@ -15,6 +15,8 @@
 #include "storage/block.h"
 #include "storage/fs.h"
 #include "memory/page.h"
+#include "memory/multiboot.h"
+#include "debug.h"
 
 extern volatile uint64_t timer_ticks;
 
@@ -119,9 +121,13 @@ static void test_page_allocator(void)
     );
 }
 
-void kernel_main(void)
+void kernel_main(uint64_t magic, uint64_t mb_info_addr)
 {
+    debug_init();
+    debug_puts("[JARVIS-OS] Early serial debug online.\n");
+
     terminal_initialize();
+    multiboot_dump_memory_map(magic, mb_info_addr);
 
     heap_init();
     test_page_allocator();

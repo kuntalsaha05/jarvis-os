@@ -19,6 +19,9 @@ def main():
     commands_to_send = (
         "\n"
         "status\n"
+        "threads\n"
+        "ls\n"
+        "cat kernel.cfg\n"
         "sched\n"
         "paging\n"
         "fit\n"
@@ -40,7 +43,7 @@ def main():
             stderr=subprocess.PIPE
         )
 
-        stdout_data, stderr_data = proc.communicate(input=commands_to_send, timeout=9)
+        stdout_data, stderr_data = proc.communicate(input=commands_to_send, timeout=10)
     except subprocess.TimeoutExpired:
         proc.kill()
         stdout_data, stderr_data = proc.communicate()
@@ -54,6 +57,10 @@ def main():
     print(f"Captured {len(output)} bytes of serial output in {duration:.2f}s.\n")
 
     required_checkpoints = [
+        ("Early Serial Debug Output", "[JARVIS-OS] Early serial debug online."),
+        ("Multiboot 0.6.96 Hand-off", "Bootloader Hand-off: Multiboot 0.6.96 Verified"),
+        ("Physical Memory Discovery", "Physical Memory: Lower"),
+        ("BIOS/GRUB Memory Map", "BIOS/GRUB Memory Map:"),
         ("Page Allocator Test", "Page allocator test: PASS"),
         ("RAM Disk Test", "RAM disk test: PASS"),
         ("Kernel Online", "Status: ONLINE"),
@@ -63,6 +70,11 @@ def main():
         ("Timer Preemption Quanta Switch", "[PREEMPT 1] Preempted across timer quanta, completed!"),
         ("Timer Preemption Verified", "PIT timer preemption test: PASS (involuntary timer preemption verified)"),
         ("Shell Ready", "jarvis>"),
+        ("Process & Thread Metrics", "Process & Thread Subsystem Statistics:"),
+        ("Context Switch Counting", "Total Context Switches:"),
+        ("Quantum Preemption Counting", "Quantum Preemptions:"),
+        ("Directory Listing (ls)", "JARVIS-FS Directory Listing:"),
+        ("File Readback (cat)", "--- Content of kernel.cfg ---"),
         ("CPU Scheduling Simulation", "CPU SCHEDULING ALGORITHM BENCHMARK"),
         ("Page Replacement Benchmark", "PAGE REPLACEMENT ALGORITHM BENCHMARK"),
         ("Belady's Anomaly", "ANOMALY CONFIRMED!"),

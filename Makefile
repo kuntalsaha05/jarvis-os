@@ -36,6 +36,8 @@ OBJECTS = \
 	build/mem_fit.o \
 	build/file_alloc.o \
 	build/disk_sched.o \
+	build/debug.o \
+	build/multiboot.o \
 	build/terminal.o \
 	build/keyboard.o \
 	build/shell.o
@@ -129,6 +131,12 @@ build/file_alloc.o: kernel/algorithms/file_alloc.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
 build/disk_sched.o: kernel/algorithms/disk_sched.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/debug.o: kernel/drivers/debug.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/multiboot.o: kernel/memory/multiboot.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
 $(KERNEL): $(OBJECTS)
