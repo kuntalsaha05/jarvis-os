@@ -73,3 +73,4 @@ class LlamaCppBackend(LLMInterface):
             "quantized": True,
             "available": self.is_available()
         }
+

@@ -85,3 +85,4 @@ class JarvisCompanion:
             }
             for e in self.registry.audit_log
         ]
+

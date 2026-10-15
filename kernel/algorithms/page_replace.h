@@ -23,3 +23,4 @@ void page_replace_run_demo(void);
 void page_replace_belady_demo(void);
 
 #endif /* PAGE_REPLACE_H */
+

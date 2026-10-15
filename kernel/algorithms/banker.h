@@ -30,3 +30,4 @@ int banker_request_resources(banker_system_t *sys, uint32_t pid, const uint32_t 
 void banker_run_demo(void);
 
 #endif /* BANKER_H */
+

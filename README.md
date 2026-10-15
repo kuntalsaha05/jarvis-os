@@ -120,3 +120,4 @@ Detailed technical architecture and design docs are available in `docs/`:
 - [`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md): Host companion design, security allowlists, and local LLM backends.
 - [`docs/TESTING.md`](docs/TESTING.md): Verification methodology across host tests, Python tests, and QEMU smoke tests.
 - [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md): Architectural boundaries, uniprocessor assumptions, and educational scope.
+

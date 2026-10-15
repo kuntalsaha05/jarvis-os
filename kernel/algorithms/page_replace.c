@@ -218,3 +218,4 @@ void page_replace_run_demo(void)
 
     page_replace_belady_demo();
 }
+

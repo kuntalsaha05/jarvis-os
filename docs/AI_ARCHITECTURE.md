@@ -110,3 +110,4 @@ Communication across the Host-Kernel bridge uses structured JSON messages:
   "execution_time_ms": 0.15
 }
 ```
+

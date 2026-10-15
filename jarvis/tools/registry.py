@@ -147,3 +147,4 @@ class ToolRegistry:
             lambda args: {"demonstration": args.get("demo_name", "all"), "result": "Demo triggered via companion bridge"},
             param_schema={"demo_name": str}
         )
+

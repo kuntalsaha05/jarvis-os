@@ -35,3 +35,4 @@ void sched_sim_rr(const sched_task_t *inputs, uint32_t count, uint32_t quantum, 
 void sched_sim_run_demo(void);
 
 #endif /* SCHED_SIM_H */
+

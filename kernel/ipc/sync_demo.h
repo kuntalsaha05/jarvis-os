@@ -21,3 +21,4 @@ void sync_demo_reader_writer(void);
 void sync_run_demo(void);
 
 #endif /* SYNC_DEMO_H */
+

@@ -118,3 +118,4 @@ Disk scheduling algorithms order outstanding I/O track requests to minimize mech
    - The head sweeps in one direction servicing requests until it reaches the edge of the disk, then reverses direction.
 4. **C-SCAN (Circular SCAN)**:
    - The head sweeps in one direction to the end of the disk, then immediately jumps back to track 0 without servicing requests on the return trip, providing a more uniform wait time.
+

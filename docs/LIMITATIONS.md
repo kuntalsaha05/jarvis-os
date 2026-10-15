@@ -52,3 +52,4 @@ If an experimental modification causes a kernel boot regression:
 2. Ensure IDT vectors 0-31 are hooked to `generic_exception_stub` so unexpected CPU exceptions print diagnostics instead of triple-faulting.
 3. Use the serial console or debug port `0xE9` (`make run-headless` or `make test-qemu`) to capture boot diagnostic messages.
 4. Git recovery branch `checkpoint-preemption-dev` and directory `backups/pre-repair-20261015/` contain baseline recovery copies.
+

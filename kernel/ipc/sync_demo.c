@@ -231,3 +231,4 @@ void sync_run_demo(void)
     sync_demo_producer_consumer();
     sync_demo_reader_writer();
 }
+

@@ -51,3 +51,4 @@ class BridgeResponse:
             error_message=data.get("error_message"),
             execution_time_ms=data.get("execution_time_ms", 0.0)
         )
+

@@ -338,3 +338,4 @@ void fs_run_demo(void)
     /* Directory listing */
     fs_list();
 }
+

@@ -109,3 +109,4 @@ When piping commands directly into QEMU (`printf "status\n" | make run-headless`
 printf "\nstatus\nsched\n" | make run-headless
 ```
 This ensures the newline satisfies GRUB's prompt, and all subsequent commands arrive cleanly at the `jarvis>` shell.
+

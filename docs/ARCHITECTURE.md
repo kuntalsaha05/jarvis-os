@@ -132,3 +132,4 @@ To support interactive use and automated smoke testing without external display 
   2. The COM1 serial port at I/O port `0x3F8` (configured at 38400 baud, 8N1).
   3. The QEMU/Bochs debug port at I/O port `0xE9`.
 - **Input**: `keyboard_read_char` polls both the COM1 serial status register (`0x3FD & 0x01`) and the PS/2 keyboard controller (`0x64 & 0x01`). Keystrokes typed into either the graphical window or a piped terminal session are handled identically.
+
