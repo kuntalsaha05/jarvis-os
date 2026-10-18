@@ -38,6 +38,8 @@ class MockLLMBackend(LLMInterface):
             return "JARVIS: Memory subsystem report shows 64 frames available in the physical page pool."
         elif "file" in prompt.lower() or "storage" in prompt.lower():
             return "JARVIS: JARVIS-FS volume verified with 120 free data blocks on RAM disk."
+        elif "hi" in prompt.lower().split() or "hello" in prompt.lower() or "hey" in prompt.lower():
+            return "JARVIS: Hello! I am your AI system companion for JARVIS-OS. How can I assist you today?"
 
         return "JARVIS test response."
 

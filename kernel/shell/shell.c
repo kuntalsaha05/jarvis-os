@@ -627,6 +627,10 @@ static void execute_command(void)
     else if (cmd_match(command, "tests")) {
         run_all_tests();
     }
+    else if (cmd_match(command, "hi") || cmd_match(command, "hello") || cmd_match(command, "hey")) {
+        terminal_write("\nHello! I am JARVIS, your AI-first operating system companion.\n");
+        terminal_write("Type 'help' for available commands, 'ai' for AI companion status, or 'gui' for desktop.\n");
+    }
     else {
         terminal_write("\nUnknown command: '");
         terminal_write(command);

@@ -314,6 +314,18 @@ void desktop_handle_key(char c)
                 /* Execute command in terminal shell */
                 shell_execute(d_state.term_input);
 
+                if (d_state.term_input[0] == 'h' && (d_state.term_input[1] == 'i' || (d_state.term_input[1] == 'e' && d_state.term_input[2] == 'y'))) {
+                    term_add_line("JARVIS: Hello! Type 'help' for commands, or press TAB for AI Chat.");
+                } else if (d_state.term_input[0] == 'h' && d_state.term_input[1] == 'e' && d_state.term_input[2] == 'l' && d_state.term_input[3] == 'p') {
+                    term_add_line("Commands: status, ps, df, ls, cat, write, sched, banker, ai, esc");
+                } else if (d_state.term_input[0] == 'a' && d_state.term_input[1] == 'i') {
+                    term_add_line("AI Status: Protocol v1.0, 4-Tier Security active. Press TAB for AI Chat.");
+                } else if (d_state.term_input[0] == 's' && d_state.term_input[1] == 't') {
+                    term_add_line("System: x86-64 Long Mode, PIT 100Hz, 64 Pages, JARVIS-FS Ready.");
+                } else {
+                    term_add_line("Command executed. (Output sent to serial/console. Press TAB for SysMon)");
+                }
+
                 d_state.term_input_len = 0;
                 d_state.term_input[0] = '\0';
             }
@@ -335,7 +347,10 @@ void desktop_handle_key(char c)
                 ai_add_line(user_echo);
 
                 /* Synthesize verified offline AI answer with provenance */
-                if (d_state.ai_input[0] == 'h' && d_state.ai_input[1] == 'e') {
+                if ((d_state.ai_input[0] == 'h' && d_state.ai_input[1] == 'i') ||
+                    (d_state.ai_input[0] == 'h' && d_state.ai_input[1] == 'e' && d_state.ai_input[2] == 'l' && d_state.ai_input[3] == 'l')) {
+                    ai_add_line("JARVIS: Hello! I am your AI system companion. How can I assist you? [LIVE_KERNEL]");
+                } else if (d_state.ai_input[0] == 'h' && d_state.ai_input[1] == 'e') {
                     ai_add_line("JARVIS: Available tools: status, memory, scheduler, fs [LIVE_KERNEL]");
                 } else if (d_state.ai_input[0] == 's' && d_state.ai_input[1] == 't') {
                     ai_add_line("JARVIS: Kernel Online, Multiboot Long Mode, PIT 100Hz [LIVE_KERNEL]");
