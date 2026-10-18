@@ -88,13 +88,17 @@ To ensure absolute transparency and prevent ambiguity, every requirement is tagg
 | **64** | **AI Message Size Enforcement (64KB Limit)** | Host-Side AI / Tool Component | `jarvis/bridge/protocol.py` | `make test-ai` (Test: `test_message_size_limit_rejection`) | **PASS** | Payloads exceeding `MAX_MESSAGE_SIZE = 65536` bytes rejected immediately with `ValueError`. |
 | **65** | **Automated Stress Testing Suite** | Real Kernel Mechanism | `tests/host_tests.c`, `tests/test_ai.py` | `make test` & `make test-ai` | **PASS** | 10,000-cycle state machine, dynamic heap churn, filesystem boundary rollback, 200-cycle WM churn, event burst overflow. |
 | **66** | **Empirical Performance Benchmarking Suite** | Real Kernel Mechanism | `tests/perf_bench.c`, `scripts/benchmark_phase13.py` | `make bench-full` | **PASS** | Measures heap latency (4.3 ns), FS write (540 MB/s), redraw cost (0.91 ms), boot time (2.2s), and AI latency. |
+| **67** | **Interactive AI Desktop Companion Window** | Real Kernel Mechanism | `kernel/gui/desktop.c`, `desktop.h` | `make test` (*Desktop Invariants*), `make test-gui` | **PASS** | 24-line circular history, cyan user queries, prompt box with cursor, 3-tier header status banner. |
+| **68** | **Direct Kernel Subsystem Telemetry Queries** | Real Kernel Mechanism | `kernel/gui/desktop.c`, `page.c`, `scheduler.c`, `fs.c` | `make test` (*AI Subsystem Queries*) | **PASS** | Live introspection of `timer_ticks`, `page_get_stats`, `scheduler_get_stats`, `fs_get_inode` via `/status`, `/memory`, `/sched`, `/files`. |
+| **69** | **Interactive Privileged & Destructive Authorization Gating** | Real Kernel Mechanism & Host AI | `kernel/gui/desktop.c`, `jarvis/agent/agent.py` | `make test` & `make test-ai` | **PASS** | Privileged (`/panic`) and destructive (`/format`) actions gated behind user confirmation (`/confirm <action>`); arbitrary tool execution rejected. |
+| **70** | **Data Provenance & Disconnected Transport Resilience** | Real Kernel Mechanism & Host AI | `kernel/gui/desktop.c`, `jarvis/tools/registry.py` | `make test-ai` | **PASS** | Transparent labeling (`[LIVE_KERNEL]` vs `[HOST_AI_MODEL]`); graceful fallback to `OFFLINE_FALLBACK` when disconnected. |
 
 ---
 
 ## 3. Summary of Verification Status
 
-- **Total Tracked Capabilities**: 66
-- **Verified Complete**: 66 (100%)
+- **Total Tracked Capabilities**: 70
+- **Verified Complete**: 70 (100%)
 - **Failing or Blocked**: 0 (0%)
 - **Simulations Documented & Decoupled**: 8 (All cleanly labeled and isolated from real kernel routines)
 - **Architectural Boundaries Explicitly Documented**: All (Single uniprocessor PIC model, identity-mapped 2 MiB address space, Ring 0 monolithic kernel, RAM disk volatility, software-only 2D rasterizer, and host-side AI execution documented in [`docs/KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)).

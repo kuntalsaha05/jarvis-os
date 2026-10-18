@@ -21,11 +21,16 @@ typedef struct {
     uint32_t term_input_len;
 
     /* AI Application State */
-    char ai_history[16][80];
+    char ai_history[24][80];
     uint32_t ai_line_count;
     char ai_input[80];
     uint32_t ai_input_len;
     char ai_backend_model[32];
+    char ai_backend_status[24];
+    char ai_status_msg[64];
+    int ai_is_streaming;
+    int ai_is_connected;
+    uint32_t ai_requests_count;
 
     /* File Browser State */
     char selected_file[32];
@@ -54,6 +59,11 @@ void desktop_launch_ai(void);
 void desktop_cycle_theme(void);
 int desktop_save_settings(void);
 void desktop_reset_settings(void);
+
+void desktop_ai_clear_history(void);
+void desktop_ai_cancel_generation(void);
+void desktop_ai_submit_query(const char *query);
+void desktop_ai_set_backend_status(const char *status, const char *model, int is_connected);
 
 const desktop_env_t *desktop_get_env(void);
 

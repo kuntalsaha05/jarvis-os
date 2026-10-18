@@ -66,7 +66,7 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
    - Enforced 10-second execution deadlines and sub-millisecond audit trails.
    - Host CLI with `--interactive`, `--explain <concept>`, `--fs-diagnostics`, `--status`, and `--audit`.
 
-6. **Native Graphical Desktop, Window Manager & Application Framework (Phases 10, 11 & 12)**:
+6. **Native Graphical Desktop, Window Manager & AI Desktop Experience (Phases 10, 11, 12 & 16)**:
    - High-resolution VBE/Bochs BGA $1024 \times 768 \times 32\text{ bpp}$ linear framebuffer auto-discovery (`0xFD000000`).
    - True Window Manager (`kernel/gui/wm.c` / `wm.h`) supporting window creation, destruction, z-order promotion, title bars, and boundary clipping.
    - Interactive window controls: Minimize (`_`), Maximize (`[]`), Close (`X`), and mouse dragging.
@@ -74,6 +74,7 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
    - Reusable GUI Application Framework (`kernel/gui/app.c` / `app.h`) with lifecycle states (`REGISTERED`, `RUNNING`, `MINIMIZED`, `STOPPED`), duplicate ID rejection, and clean resource destruction.
    - Desktop Configuration & Persistence Subsystem (`kernel/gui/config.c` / `config.h`): versioned `desktop.cfg` format with magic header (`0x4A434647`), checksum validation, safe defaults fallback, and 3 desktop themes (JARVIS Dark, Cyberpunk, Classic Slate).
    - 5 Dedicated desktop applications: Graphical Terminal (`jarvis>`), System Monitor (live CPU & memory gauges), File Browser (JARVIS-FS RAMDisk explorer), Process & Scheduler Monitor, and JARVIS AI Companion.
+   - Interactive AI Desktop Companion Window (`desktop.c` / `desktop.h`): 24-line scrollable chat history, live kernel telemetry inspection (`timer_ticks`, `page_get_stats`, `scheduler_get_stats`, `fs_get_inode`), 4-tier allowlist sandbox, interactive privileged/destructive action confirmation (`/panic`, `/format` -> `/confirm <action>`), provenance labeling (`[LIVE_KERNEL]`, `[HOST_AI_MODEL]`), and nonblocking interrupt-safe rendering.
    - Dual-channel PS/2 mouse driver with packet decoding and hardware arrow cursor.
    - Zero-regression console fallback: `ESC` returns cleanly to text console shell.
 
@@ -194,6 +195,7 @@ Detailed technical architecture, reports, and design docs are available in `docs
 - [`docs/PRESENTATION_OUTLINE.md`](docs/PRESENTATION_OUTLINE.md): Engineering defense and presentation slide outline with anticipated Q&A.
 
 ### Phase Verification Reports
+- [`docs/PHASE16_AI_DESKTOP.md`](docs/PHASE16_AI_DESKTOP.md): Phase 16 AI desktop experience, live kernel telemetry, and allowlist sandbox security report.
 - [`docs/PHASE13_STABILITY_REPORT.md`](docs/PHASE13_STABILITY_REPORT.md): Phase 13 security audit, stability hardening, stress testing, and performance baselines report.
 - [`docs/PHASE12_APP_FRAMEWORK.md`](docs/PHASE12_APP_FRAMEWORK.md): Phase 12 application framework, desktop configuration, themes, and persistence report.
 - [`docs/PHASE11_GUI_VERIFICATION.md`](docs/PHASE11_GUI_VERIFICATION.md): Phase 11 window manager, event queue, dragging, and desktop application suite report.

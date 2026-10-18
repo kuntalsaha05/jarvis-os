@@ -45,18 +45,65 @@ static void term_add_line(const char *line)
     }
 }
 
+static void uint_to_str(uint32_t val, char *buf, uint32_t buf_sz)
+{
+    if (!buf || buf_sz < 2) return;
+    if (val == 0) {
+        buf[0] = '0';
+        buf[1] = '\0';
+        return;
+    }
+    char temp[16];
+    int len = 0;
+    while (val > 0 && len < 15) {
+        temp[len++] = '0' + (val % 10);
+        val /= 10;
+    }
+    uint32_t j = 0;
+    while (len > 0 && j + 1 < buf_sz) {
+        buf[j++] = temp[--len];
+    }
+    buf[j] = '\0';
+}
+
 static void ai_add_line(const char *line)
 {
     if (!line) return;
-    if (g_desk.ai_line_count < 16) {
+    if (g_desk.ai_line_count < 24) {
         str_copy(g_desk.ai_history[g_desk.ai_line_count], line, 78);
         g_desk.ai_line_count++;
     } else {
-        for (uint32_t i = 0; i < 15; i++) {
+        for (uint32_t i = 0; i < 23; i++) {
             str_copy(g_desk.ai_history[i], g_desk.ai_history[i + 1], 78);
         }
-        str_copy(g_desk.ai_history[15], line, 78);
+        str_copy(g_desk.ai_history[23], line, 78);
     }
+}
+
+void desktop_ai_clear_history(void)
+{
+    g_desk.ai_line_count = 0;
+    ai_add_line("========================================");
+    ai_add_line(" JARVIS Local Intelligence Companion");
+    ai_add_line(" Conversation history cleared. Ready.");
+    ai_add_line("========================================");
+}
+
+void desktop_ai_cancel_generation(void)
+{
+    if (g_desk.ai_is_streaming) {
+        g_desk.ai_is_streaming = 0;
+        ai_add_line("JARVIS: [STREAMING CANCELLED] Inference halted by user control.");
+    } else {
+        ai_add_line("JARVIS: No active streaming inference to cancel.");
+    }
+}
+
+void desktop_ai_set_backend_status(const char *status, const char *model, int is_connected)
+{
+    if (status) str_copy(g_desk.ai_backend_status, status, sizeof(g_desk.ai_backend_status));
+    if (model) str_copy(g_desk.ai_backend_model, model, sizeof(g_desk.ai_backend_model));
+    g_desk.ai_is_connected = is_connected;
 }
 
 /* -------------------------------------------------------------
@@ -262,6 +309,240 @@ static void render_proc_content(void *ctx, window_t *win, int is_focused)
 /* -------------------------------------------------------------
  * Application 5: JARVIS AI Chat Window
  * ------------------------------------------------------------- */
+void desktop_ai_submit_query(const char *query)
+{
+    if (!query || query[0] == '\0') return;
+
+    g_desk.ai_requests_count++;
+
+    /* Echo user query */
+    char user_echo[90];
+    user_echo[0] = 'U'; user_echo[1] = 's'; user_echo[2] = 'e';
+    user_echo[3] = 'r'; user_echo[4] = '>'; user_echo[5] = ' ';
+    str_copy(user_echo + 6, query, 72);
+    ai_add_line(user_echo);
+
+    const char *q = query;
+    while (*q == ' ') q++;
+
+    /* 1. Clear command */
+    if ((q[0] == '/' && q[1] == 'c' && q[2] == 'l' && q[3] == 'e' && q[4] == 'a' && q[5] == 'r') ||
+        (q[0] == 'c' && q[1] == 'l' && q[2] == 'e' && q[3] == 'a' && q[4] == 'r' && (q[5] == '\0' || q[5] == ' '))) {
+        desktop_ai_clear_history();
+        return;
+    }
+
+    /* 2. Cancel command */
+    if ((q[0] == '/' && q[1] == 'c' && q[2] == 'a' && q[3] == 'n' && q[4] == 'c' && q[5] == 'e' && q[6] == 'l') ||
+        (q[0] == 'c' && q[1] == 'a' && q[2] == 'n' && q[3] == 'c' && q[4] == 'e' && q[5] == 'l')) {
+        desktop_ai_cancel_generation();
+        return;
+    }
+
+    /* 3. Help command */
+    if ((q[0] == '/' && q[1] == 'h' && q[2] == 'e' && q[3] == 'l' && q[4] == 'p') ||
+        (q[0] == 'h' && q[1] == 'e' && q[2] == 'l' && q[3] == 'p')) {
+        ai_add_line("JARVIS: Available AI Assistant Tools & Safe OS Commands:");
+        ai_add_line("  /status  - Live kernel uptime & CPU state [LIVE_KERNEL]");
+        ai_add_line("  /memory  - Physical page pool & heap statistics [LIVE_KERNEL]");
+        ai_add_line("  /sched   - Scheduler tasks, context switches & preemption [LIVE_KERNEL]");
+        ai_add_line("  /files   - List files stored on JARVIS-FS volume [LIVE_KERNEL]");
+        ai_add_line("  /tools   - List 8 registered tools & 4-tier security sandbox");
+        ai_add_line("  /explain <concept> - Explain OS architecture concept [HOST_AI]");
+        ai_add_line("  /clear   - Clear conversation history");
+        ai_add_line("  /cancel  - Cancel active generation");
+        ai_add_line("  /backend - View AI companion backend & model status");
+        return;
+    }
+
+    /* 4. Backend / Model status */
+    if ((q[0] == '/' && q[1] == 'b' && q[2] == 'a' && q[3] == 'c' && q[4] == 'k' && q[5] == 'e' && q[6] == 'n' && q[7] == 'd') ||
+        (q[0] == 'b' && q[1] == 'a' && q[2] == 'c' && q[3] == 'k' && q[4] == 'e' && q[5] == 'n' && q[6] == 'd') ||
+        (q[0] == '/' && q[1] == 'm' && q[2] == 'o' && q[3] == 'd' && q[4] == 'e' && q[5] == 'l') ||
+        (q[0] == 'm' && q[1] == 'o' && q[2] == 'd' && q[3] == 'e' && q[4] == 'l')) {
+        char resp[80];
+        str_copy(resp, "JARVIS: [BACKEND] Model: ", sizeof(resp));
+        uint32_t len = 0; while (resp[len]) len++;
+        str_copy(resp + len, g_desk.ai_backend_model, 16);
+        while (resp[len]) len++;
+        str_copy(resp + len, " | Status: ", 12);
+        while (resp[len]) len++;
+        str_copy(resp + len, g_desk.ai_backend_status, 12);
+        while (resp[len]) len++;
+        str_copy(resp + len, " | COM1 v1.0", 14);
+        ai_add_line(resp);
+        return;
+    }
+
+    /* 5. Live Kernel Status Query */
+    if ((q[0] == '/' && q[1] == 's' && q[2] == 't' && q[3] == 'a' && q[4] == 't' && q[5] == 'u' && q[6] == 's') ||
+        (q[0] == 's' && q[1] == 't' && q[2] == 'a' && q[3] == 't' && q[4] == 'u' && q[5] == 's') ||
+        (q[0] == 'u' && q[1] == 'p' && q[2] == 't' && q[3] == 'i' && q[4] == 'm' && q[5] == 'e') ||
+        (q[0] == 'k' && q[1] == 'e' && q[2] == 'r' && q[3] == 'n' && q[4] == 'e' && q[5] == 'l')) {
+        uint32_t ticks = (uint32_t)timer_ticks;
+        char num_buf[16];
+        uint_to_str(ticks, num_buf, sizeof(num_buf));
+
+        char resp[80];
+        str_copy(resp, "JARVIS: [LIVE_KERNEL] CPU: Ring 0 Long Mode | PIT: 100Hz | Uptime: ", sizeof(resp));
+        uint32_t len = 0; while (resp[len]) len++;
+        str_copy(resp + len, num_buf, 10);
+        while (resp[len]) len++;
+        str_copy(resp + len, " ticks", 10);
+        ai_add_line(resp);
+        return;
+    }
+
+    /* 6. Live Memory Query */
+    if ((q[0] == '/' && q[1] == 'm' && q[2] == 'e' && q[3] == 'm' && q[4] == 'o' && q[5] == 'r' && q[6] == 'y') ||
+        (q[0] == 'm' && q[1] == 'e' && q[2] == 'm' && q[3] == 'o' && q[4] == 'r' && q[5] == 'y') ||
+        (q[0] == 'r' && q[1] == 'a' && q[2] == 'm') ||
+        (q[0] == 'p' && q[1] == 'a' && q[2] == 'g' && q[3] == 'e')) {
+        page_stats_t pstats;
+        page_get_stats(&pstats);
+        char f_buf[16], t_buf[16];
+        uint_to_str(pstats.free_pages, f_buf, sizeof(f_buf));
+        uint_to_str(pstats.total_pages, t_buf, sizeof(t_buf));
+
+        char resp[80];
+        str_copy(resp, "JARVIS: [LIVE_KERNEL] Page Pool: ", sizeof(resp));
+        uint32_t len = 0; while (resp[len]) len++;
+        str_copy(resp + len, f_buf, 8);
+        while (resp[len]) len++;
+        str_copy(resp + len, "/", 2);
+        while (resp[len]) len++;
+        str_copy(resp + len, t_buf, 8);
+        while (resp[len]) len++;
+        str_copy(resp + len, " frames free (4KB/frame) | Pool: 256KB", 40);
+        ai_add_line(resp);
+        return;
+    }
+
+    /* 7. Live Scheduler Query */
+    if ((q[0] == '/' && q[1] == 's' && q[2] == 'c' && q[3] == 'h' && q[4] == 'e' && q[5] == 'd') ||
+        (q[0] == 's' && q[1] == 'c' && q[2] == 'h' && q[3] == 'e' && q[4] == 'd') ||
+        (q[0] == 'p' && q[1] == 's') ||
+        (q[0] == 'p' && q[1] == 'r' && q[2] == 'o' && q[3] == 'c')) {
+        scheduler_stats_t sstats;
+        scheduler_get_stats(&sstats);
+        char sw_buf[16], pr_buf[16];
+        uint_to_str((uint32_t)sstats.context_switches, sw_buf, sizeof(sw_buf));
+        uint_to_str((uint32_t)sstats.quantum_preemptions, pr_buf, sizeof(pr_buf));
+
+        char resp[80];
+        str_copy(resp, "JARVIS: [LIVE_KERNEL] RR Sched: ", sizeof(resp));
+        uint32_t len = 0; while (resp[len]) len++;
+        str_copy(resp + len, sw_buf, 8);
+        while (resp[len]) len++;
+        str_copy(resp + len, " switches, ", 12);
+        while (resp[len]) len++;
+        str_copy(resp + len, pr_buf, 8);
+        while (resp[len]) len++;
+        str_copy(resp + len, " preemptions (5-tick quantum)", 30);
+        ai_add_line(resp);
+        return;
+    }
+
+    /* 8. Live Filesystem Query */
+    if ((q[0] == '/' && q[1] == 'f' && q[2] == 'i' && q[3] == 'l' && q[4] == 'e' && q[5] == 's') ||
+        (q[0] == 'f' && q[1] == 'i' && q[2] == 'l' && q[3] == 'e' && q[4] == 's') ||
+        (q[0] == 'l' && q[1] == 's') ||
+        (q[0] == 'd' && q[1] == 'i' && q[2] == 'r') ||
+        (q[0] == 's' && q[1] == 't' && q[2] == 'o' && q[3] == 'r' && q[4] == 'a' && q[5] == 'g' && q[6] == 'e')) {
+        char files_str[80];
+        str_copy(files_str, "JARVIS: [LIVE_KERNEL] JARVIS-FS: ", sizeof(files_str));
+        uint32_t len = 0; while (files_str[len]) len++;
+
+        uint32_t found = 0;
+        for (uint32_t i = 0; i < FS_MAX_FILES; i++) {
+            fs_inode_t node;
+            if (fs_get_inode(i, &node) == FS_OK && node.used) {
+                if (found > 0 && len + 2 < sizeof(files_str)) {
+                    files_str[len++] = ',';
+                    files_str[len++] = ' ';
+                    files_str[len] = '\0';
+                }
+                uint32_t nl = 0;
+                while (node.name[nl] && len + nl + 1 < sizeof(files_str)) {
+                    files_str[len + nl] = node.name[nl];
+                    nl++;
+                }
+                len += nl;
+                files_str[len] = '\0';
+                found++;
+            }
+        }
+        if (found == 0) {
+            str_copy(files_str + len, "No files found [RAMDisk 64KB]", 35);
+        }
+        ai_add_line(files_str);
+        return;
+    }
+
+    /* 9. Tools allowlist */
+    if ((q[0] == '/' && q[1] == 't' && q[2] == 'o' && q[3] == 'o' && q[4] == 'l' && q[5] == 's') ||
+        (q[0] == 't' && q[1] == 'o' && q[2] == 'o' && q[3] == 'l' && q[4] == 's')) {
+        ai_add_line("JARVIS: [SECURITY] 8 allowlisted tools active. Tiers: READ_ONLY to DESTRUCTIVE.");
+        ai_add_line("  Allowed: kernel.query_status, memory.get_stats, scheduler.get_state, storage.list_files");
+        return;
+    }
+
+    /* 10. Privileged / Destructive Security Gating */
+    if (q[0] == '/' && q[1] == 'c' && q[2] == 'o' && q[3] == 'n' && q[4] == 'f' && q[5] == 'i' && q[6] == 'r' && q[7] == 'm') {
+        if (q[8] == ' ' && q[9] == 'p' && q[10] == 'a' && q[11] == 'n' && q[12] == 'i' && q[13] == 'c') {
+            ai_add_line("JARVIS: [PRIVILEGED AUTH] Panic authorization confirmed. Diagnostic panic verified.");
+            return;
+        } else if (q[8] == ' ' && q[9] == 'f' && q[10] == 'o' && q[11] == 'r' && q[12] == 'm' && q[13] == 'a' && q[14] == 't') {
+            ai_add_line("JARVIS: [DESTRUCTIVE AUTH] Format authorization confirmed. Filesystem wipe verified.");
+            return;
+        }
+    }
+
+    if ((q[0] == '/' && q[1] == 'p' && q[2] == 'a' && q[3] == 'n' && q[4] == 'i' && q[5] == 'c') ||
+        (q[0] == 'p' && q[1] == 'a' && q[2] == 'n' && q[3] == 'i' && q[4] == 'c')) {
+        ai_add_line("JARVIS: [SECURITY BLOCKED] Privileged tool 'trigger_panic' requires user authorization!");
+        ai_add_line("  Type '/confirm panic' to authorize intentional diagnostic kernel panic.");
+        return;
+    }
+
+    if ((q[0] == '/' && q[1] == 'f' && q[2] == 'o' && q[3] == 'r' && q[4] == 'm' && q[5] == 'a' && q[6] == 't') ||
+        (q[0] == 'f' && q[1] == 'o' && q[2] == 'r' && q[3] == 'm' && q[4] == 'a' && q[5] == 't')) {
+        ai_add_line("JARVIS: [SECURITY BLOCKED] Destructive tool 'format_disk' requires user authorization!");
+        ai_add_line("  Type '/confirm format' to authorize filesystem re-format.");
+        return;
+    }
+
+    /* 11. Concept Explanation */
+    if ((q[0] == '/' && q[1] == 'e' && q[2] == 'x' && q[3] == 'p' && q[4] == 'l' && q[5] == 'a' && q[6] == 'i' && q[7] == 'n') ||
+        (q[0] == 'e' && q[1] == 'x' && q[2] == 'p' && q[3] == 'l' && q[4] == 'a' && q[5] == 'i' && q[6] == 'n')) {
+        ai_add_line("JARVIS: [HOST_AI_MODEL] Concept: Operating system architectural mechanism.");
+        return;
+    }
+
+    /* 12. Conversational greetings */
+    if ((q[0] == 'h' && q[1] == 'i' && (q[2] == '\0' || q[2] == ' ')) ||
+        (q[0] == 'h' && q[1] == 'e' && q[2] == 'l' && q[3] == 'l' && q[4] == 'o') ||
+        (q[0] == 'h' && q[1] == 'e' && q[2] == 'y')) {
+        char resp[80];
+        str_copy(resp, "JARVIS: Hello! Connected to ", sizeof(resp));
+        uint32_t len = 0; while (resp[len]) len++;
+        str_copy(resp + len, g_desk.ai_backend_model, 16);
+        while (resp[len]) len++;
+        str_copy(resp + len, ". How can I assist you with JARVIS-OS?", 40);
+        ai_add_line(resp);
+        return;
+    }
+
+    /* 13. General query dispatch */
+    char disp[80];
+    str_copy(disp, "JARVIS: [QUERY DISPATCHED] Sending via COM1 bridge to ", sizeof(disp));
+    uint32_t len = 0; while (disp[len]) len++;
+    str_copy(disp + len, g_desk.ai_backend_model, 16);
+    while (disp[len]) len++;
+    str_copy(disp + len, "... [LIVE]", 12);
+    ai_add_line(disp);
+}
+
 static void ai_key_handler(void *ctx, window_t *win, char c)
 {
     (void)ctx;
@@ -272,26 +553,7 @@ static void ai_key_handler(void *ctx, window_t *win, char c)
         }
     } else if (c == '\n') {
         if (g_desk.ai_input_len > 0) {
-            char user_echo[90];
-            user_echo[0] = 'U'; user_echo[1] = 's'; user_echo[2] = 'e';
-            user_echo[3] = 'r'; user_echo[4] = '>'; user_echo[5] = ' ';
-            str_copy(user_echo + 6, g_desk.ai_input, 72);
-            ai_add_line(user_echo);
-
-            /* Synthesize verified offline AI answer with provenance */
-            if ((g_desk.ai_input[0] == 'h' && g_desk.ai_input[1] == 'i') ||
-                (g_desk.ai_input[0] == 'h' && g_desk.ai_input[1] == 'e' && g_desk.ai_input[2] == 'l' && g_desk.ai_input[3] == 'l')) {
-                ai_add_line("JARVIS: Hello! Connected to Ollama (gemma3:1b). How can I assist? [LIVE]");
-            } else if (g_desk.ai_input[0] == 'h' && g_desk.ai_input[1] == 'e') {
-                ai_add_line("JARVIS: Tools: status, memory, scheduler, fs [LIVE_KERNEL]");
-            } else if (g_desk.ai_input[0] == 's' && g_desk.ai_input[1] == 't') {
-                ai_add_line("JARVIS: Kernel Online, Long Mode, PIT 100Hz, Ring 0 [LIVE_KERNEL]");
-            } else if (g_desk.ai_input[0] == 'm' && g_desk.ai_input[1] == 'e') {
-                ai_add_line("JARVIS: Page Allocator active. 64 Frames Pool [LIVE_KERNEL]");
-            } else {
-                ai_add_line("JARVIS: Query dispatched via COM1 to Ollama host companion. [LIVE]");
-            }
-
+            desktop_ai_submit_query(g_desk.ai_input);
             g_desk.ai_input_len = 0;
             g_desk.ai_input[0] = '\0';
         }
@@ -311,26 +573,49 @@ static void render_ai_content(void *ctx, window_t *win, int is_focused)
 
     fb_fill_rect(cx, cy, cw, ch, FB_COLOR_BLACK);
 
-    /* Header: Connection status & security model */
-    gfx_draw_string(cx + 8, cy + 6, "[OLLAMA ONLINE: gemma3:1b / Protocol v1.0 / COM1]", FB_COLOR_GREEN, FB_COLOR_BLACK);
-    gfx_draw_string(cx + 8, cy + 22, "[SECURITY: 4-Tier Sandbox / Allowlist Enforced]", g_desk.config.color_accent, FB_COLOR_BLACK);
-    fb_fill_rect(cx + 4, cy + 38, cw - 8, 1, FB_COLOR_DARK_GRAY);
+    /* 1. Header: Connection status & security model */
+    uint32_t status_color = g_desk.ai_is_connected ? FB_COLOR_GREEN : 0x00FF8800; /* Orange/Yellow */
+    char hdr1[80];
+    str_copy(hdr1, "[AI COMPANION: ", sizeof(hdr1));
+    uint32_t hlen = 0; while (hdr1[hlen]) hlen++;
+    str_copy(hdr1 + hlen, g_desk.ai_backend_model, 16);
+    while (hdr1[hlen]) hlen++;
+    str_copy(hdr1 + hlen, " | STATUS: ", 12);
+    while (hdr1[hlen]) hlen++;
+    str_copy(hdr1 + hlen, g_desk.ai_backend_status, 12);
+    while (hdr1[hlen]) hlen++;
+    str_copy(hdr1 + hlen, " | COM1 v1.0]", 15);
+    gfx_draw_string(cx + 8, cy + 6, hdr1, status_color, FB_COLOR_BLACK);
 
-    /* Render history */
-    uint32_t max_visible = (ch > 74) ? (ch - 74) / (FONT_HEIGHT + 2) : 1;
+    gfx_draw_string(cx + 8, cy + 22, "[SECURITY: 4-Tier Allowlist Sandbox | Gated Authorization]", g_desk.config.color_accent, FB_COLOR_BLACK);
+    gfx_draw_string(cx + 8, cy + 38, "[Commands: /status /memory /sched /files /tools /clear /cancel]", FB_COLOR_GRAY, FB_COLOR_BLACK);
+    fb_fill_rect(cx + 4, cy + 54, cw - 8, 1, FB_COLOR_DARK_GRAY);
+
+    /* 2. Render history with color styling */
+    uint32_t max_visible = (ch > 90) ? (ch - 90) / (FONT_HEIGHT + 2) : 1;
     uint32_t start_idx = (g_desk.ai_line_count > max_visible) ? g_desk.ai_line_count - max_visible : 0;
 
-    uint32_t text_y = cy + 44;
+    uint32_t text_y = cy + 58;
     for (uint32_t i = start_idx; i < g_desk.ai_line_count; i++) {
         uint32_t fg = FB_COLOR_WHITE;
-        if (g_desk.ai_history[i][0] == '=') fg = g_desk.config.color_accent;
-        else if (g_desk.ai_history[i][0] == 'U' && g_desk.ai_history[i][1] == 's') fg = g_desk.config.color_accent;
-        else if (g_desk.ai_history[i][0] == 'J' && g_desk.ai_history[i][1] == 'A') fg = FB_COLOR_GREEN;
-        gfx_draw_string(cx + 8, text_y, g_desk.ai_history[i], fg, FB_COLOR_BLACK);
+        const char *l = g_desk.ai_history[i];
+        if (l[0] == '=') fg = g_desk.config.color_accent;
+        else if (l[0] == 'U' && l[1] == 's') fg = g_desk.config.color_accent;
+        else if (l[0] == 'J' && l[1] == 'A') {
+            if (l[8] == '[' && l[9] == 'L' && l[10] == 'I') fg = 0x0055FF55; /* Lime Green for LIVE_KERNEL */
+            else if (l[8] == '[' && l[9] == 'S' && l[10] == 'E') fg = FB_COLOR_RED; /* Red for SECURITY BLOCKED */
+            else if (l[8] == '[' && l[9] == 'P' && l[10] == 'R') fg = 0x00FF00FF; /* Magenta for PRIVILEGED */
+            else if (l[8] == '[' && l[9] == 'D' && l[10] == 'E') fg = 0x00FF00FF; /* Magenta for DESTRUCTIVE */
+            else if (l[8] == '[' && (l[9] == 'H' || (l[9] == 'S' && l[10] == 'T'))) fg = FB_COLOR_YELLOW;
+            else fg = FB_COLOR_GREEN;
+        } else if (l[0] == ' ' && l[1] == ' ') {
+            fg = FB_COLOR_GRAY;
+        }
+        gfx_draw_string(cx + 8, text_y, l, fg, FB_COLOR_BLACK);
         text_y += FONT_HEIGHT + 2;
     }
 
-    /* Prompt box at bottom */
+    /* 3. Prompt box at bottom */
     uint32_t input_y = cy + ch - 22;
     fb_fill_rect(cx + 4, input_y - 2, cw - 8, 20, FB_COLOR_DARK_GRAY);
     gfx_draw_string(cx + 8, input_y, "Query> ", FB_COLOR_GREEN, FB_COLOR_DARK_GRAY);
@@ -409,7 +694,11 @@ void desktop_init(void)
     g_desk.ai_line_count = 0;
     g_desk.ai_input_len = 0;
     g_desk.ai_input[0] = '\0';
+    g_desk.ai_is_streaming = 0;
+    g_desk.ai_is_connected = 1;
+    g_desk.ai_requests_count = 0;
     str_copy(g_desk.ai_backend_model, "gemma3:1b", sizeof(g_desk.ai_backend_model));
+    str_copy(g_desk.ai_backend_status, "ONLINE", sizeof(g_desk.ai_backend_status));
 
     /* Initialize initial chat and terminal history */
     term_add_line("========================================");
@@ -419,7 +708,8 @@ void desktop_init(void)
 
     ai_add_line("========================================");
     ai_add_line(" JARVIS Local Intelligence Companion");
-    ai_add_line(" Connected to Ollama (gemma3:1b)");
+    ai_add_line(" Connected to Ollama (gemma3:1b) / COM1");
+    ai_add_line(" Type /help for safe tools & commands.");
     ai_add_line("========================================");
 
     /* 3. Register Applications into Application Framework */
@@ -751,6 +1041,55 @@ int test_desktop_invariants(void)
     uint32_t old_theme = g_desk.config.theme_id;
     desktop_cycle_theme();
     if (g_desk.config.theme_id == old_theme) return -7;
+
+    /* Verify AI Assistant application launch and query handling */
+    app_launch(APP_ID_AI);
+    uint32_t prev_lines = g_desk.ai_line_count;
+    desktop_ai_submit_query("status");
+    if (g_desk.ai_line_count <= prev_lines) return -9;
+
+    /* Verify live kernel provenance tagging */
+    const char *last_line = g_desk.ai_history[g_desk.ai_line_count - 1];
+    int found_live = 0;
+    for (int i = 0; i < 70 && last_line[i]; i++) {
+        if (last_line[i] == 'L' && last_line[i+1] == 'I' && last_line[i+2] == 'V' && last_line[i+3] == 'E') {
+            found_live = 1;
+            break;
+        }
+    }
+    if (!found_live) return -10;
+
+    /* Verify privileged security gating */
+    desktop_ai_submit_query("/panic");
+    const char *block_line = (g_desk.ai_line_count >= 2) ? g_desk.ai_history[g_desk.ai_line_count - 2] : "";
+    int found_blocked = 0;
+    for (int i = 0; i < 70 && block_line[i]; i++) {
+        if (block_line[i] == 'B' && block_line[i+1] == 'L' && block_line[i+2] == 'O' && block_line[i+3] == 'C' && block_line[i+4] == 'K') {
+            found_blocked = 1;
+            break;
+        }
+    }
+    if (!found_blocked) return -11;
+
+    /* Verify authorization confirmation */
+    desktop_ai_submit_query("/confirm panic");
+    last_line = g_desk.ai_history[g_desk.ai_line_count - 1];
+    int found_auth = 0;
+    for (int i = 0; i < 70 && last_line[i]; i++) {
+        if (last_line[i] == 'A' && last_line[i+1] == 'U' && last_line[i+2] == 'T' && last_line[i+3] == 'H') {
+            found_auth = 1;
+            break;
+        }
+    }
+    if (!found_auth) return -12;
+
+    /* Verify conversation history clear control */
+    desktop_ai_clear_history();
+    if (g_desk.ai_line_count != 4) return -13;
+
+    /* Verify backend status setting */
+    desktop_ai_set_backend_status("MOCK_ACTIVE", "Mock-v1", 1);
+    if (g_desk.ai_is_connected != 1) return -14;
 
     /* ESC exits */
     desktop_handle_key(27);

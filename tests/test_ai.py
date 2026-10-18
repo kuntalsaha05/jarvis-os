@@ -283,6 +283,57 @@ class TestAICompanion(unittest.TestCase):
             self.assertEqual(res["telemetry_source"], "OFFLINE_SIMULATION")
         self.assertGreaterEqual(len(self.registry.audit_log), 100)
 
+    def test_phase16_safe_tools_allowlist(self):
+        # 1. Allowed safe tools
+        for tool_name in ["kernel.query_status", "memory.get_stats", "scheduler.get_state", "storage.list_files"]:
+            res = self.registry.execute_tool(tool_name, {})
+            self.assertEqual(res["status"], "SUCCESS")
+            self.assertIn("telemetry_source", res["result"])
+
+        # 2. Reject unallowlisted tool
+        res_bad = self.registry.execute_tool("arbitrary.shell_eval", {"cmd": "rm -rf /"})
+        self.assertEqual(res_bad["status"], "ERROR")
+        self.assertIn("Permission Denied", res_bad["error"])
+
+    def test_phase16_privileged_destructive_authorization(self):
+        from jarvis.agent.agent import JarvisAgent
+        agent_unauth = JarvisAgent(self.llm_manager, self.registry, approval_callback=None)
+
+        # Privileged tool blocked
+        cycle1 = agent_unauth.run_cycle("trigger a kernel panic")
+        self.assertEqual(cycle1["tool_selected"], "system.trigger_panic")
+        self.assertEqual(cycle1["approval_status"], "DENIED_NO_CALLBACK")
+        self.assertIsNone(cycle1["tool_result"])
+
+        # Destructive tool blocked
+        cycle2 = agent_unauth.run_cycle("format disk volume")
+        self.assertEqual(cycle2["tool_selected"], "storage.format_disk")
+        self.assertEqual(cycle2["approval_status"], "DENIED_NO_CALLBACK")
+        self.assertIsNone(cycle2["tool_result"])
+
+        # Authorized agent allowed
+        agent_auth = JarvisAgent(self.llm_manager, self.registry, approval_callback=lambda tool, args: True)
+        cycle3 = agent_auth.run_cycle("trigger a kernel panic")
+        self.assertEqual(cycle3["approval_status"], "GRANTED")
+        self.assertTrue(cycle3["tool_result"]["panic_invoked"])
+
+    def test_phase16_accurate_provenance_labels(self):
+        from jarvis.agent.agent import JarvisAgent
+        agent = JarvisAgent(self.llm_manager, self.registry)
+        res = agent.run_cycle("get memory statistics")
+        self.assertEqual(res["telemetry_source"], "OFFLINE_SIMULATION")
+        self.assertEqual(res["tool_result"]["telemetry_source"], "OFFLINE_SIMULATION")
+
+    def test_phase16_disconnected_serial_transport(self):
+        from jarvis.bridge.serial_transport import SerialTransport
+        st = SerialTransport() # no port connected
+        req = BridgeRequest(request_id=42, action="tool_call", tool="kernel.query_status", arguments={})
+        resp = st.send_request(req)
+        self.assertEqual(resp.request_id, 42)
+        self.assertEqual(resp.status, "OFFLINE")
+        self.assertEqual(resp.telemetry_source, "OFFLINE_SIMULATION")
+        self.assertIn("offline", resp.error_message.lower())
+
 
 if __name__ == "__main__":
     unittest.main()
