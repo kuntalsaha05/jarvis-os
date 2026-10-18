@@ -45,6 +45,7 @@ def main():
         "sync\n"
         "files\n"
         "syscall\n"
+        "ai\n"
     ).encode("utf-8")
 
     start_time = time.time()
@@ -134,7 +135,9 @@ def main():
         ("Truncate File Size", "trunc: truncated 'test_smoke.txt' to 5 bytes"),
         ("Remove File", "rm: deleted file 'test_smoke.txt'"),
         ("Filesystem Invariants Shell", "JARVIS-FS Invariants:    PASS"),
-        ("Block Device Invariants Shell", "Block Device Invariants: PASS")
+        ("Block Device Invariants Shell", "Block Device Invariants: PASS"),
+        ("AI Status Shell Command", "JARVIS AI ARCHITECTURE STATUS"),
+        ("AI Security 4-Tier Model", "Enforced Security & Permission Model:")
     ]
 
 

@@ -141,6 +141,98 @@ class TestAICompanion(unittest.TestCase):
         readback = img.read_file("host_test.txt")
         self.assertEqual(readback, test_data)
 
+    def test_agent_8_step_cycle(self):
+        from jarvis.agent.agent import JarvisAgent
+        agent = JarvisAgent(self.llm_manager, self.registry)
+        res = agent.run_cycle("What is the current kernel status?")
+        self.assertEqual(res["cycle_id"], 1)
+        self.assertEqual(res["tool_selected"], "kernel.query_status")
+        self.assertEqual(res["approval_status"], "NOT_REQUIRED")
+        self.assertEqual(res["telemetry_source"], "OFFLINE_SIMULATION")
+        self.assertIsNotNone(res["tool_result"])
+        self.assertEqual(res["tool_result"]["status"], "ONLINE")
+        self.assertIn("JARVIS", res["final_response"])
+
+    def test_agent_privileged_approval_denied_by_default(self):
+        from jarvis.agent.agent import JarvisAgent
+        # Without approval callback, privileged actions must be blocked
+        agent = JarvisAgent(self.llm_manager, self.registry)
+        res = agent.run_cycle("trigger a kernel panic now")
+        self.assertEqual(res["tool_selected"], "system.trigger_panic")
+        self.assertEqual(res["approval_status"], "DENIED_NO_CALLBACK")
+        self.assertIn("Permission Denied", res["tool_error"])
+        self.assertIsNone(res["tool_result"])
+
+    def test_agent_privileged_approval_callback_flow(self):
+        from jarvis.agent.agent import JarvisAgent
+
+        # 1. Callback returns False -> DENIED
+        agent_denied = JarvisAgent(
+            self.llm_manager,
+            self.registry,
+            approval_callback=lambda tool, args: False
+        )
+        res_denied = agent_denied.run_cycle("trigger a kernel panic")
+        self.assertEqual(res_denied["approval_status"], "DENIED")
+        self.assertIn("Permission Denied", res_denied["tool_error"])
+
+        # 2. Callback returns True -> GRANTED
+        agent_granted = JarvisAgent(
+            self.llm_manager,
+            self.registry,
+            approval_callback=lambda tool, args: True
+        )
+        res_granted = agent_granted.run_cycle("trigger a kernel panic")
+        self.assertEqual(res_granted["approval_status"], "GRANTED")
+        self.assertIsNone(res_granted["tool_error"])
+        self.assertTrue(res_granted["tool_result"]["panic_invoked"])
+
+    def test_agent_destructive_format_disk(self):
+        from jarvis.agent.agent import JarvisAgent
+        agent_granted = JarvisAgent(
+            self.llm_manager,
+            self.registry,
+            approval_callback=lambda tool, args: True
+        )
+        res = agent_granted.run_cycle("format disk volume")
+        self.assertEqual(res["tool_selected"], "storage.format_disk")
+        self.assertEqual(res["approval_status"], "GRANTED")
+        self.assertEqual(res["tool_result"]["status"], "FORMATTED")
+
+    def test_backend_health_checks(self):
+        mock_health = self.mock_backend.health_check()
+        self.assertEqual(mock_health["status"], "HEALTHY")
+
+        llama = LlamaCppBackend(model_path="/non/existent/model.gguf")
+        llama_health = llama.health_check()
+        self.assertIn(llama_health["status"], ["OFFLINE", "UNAVAILABLE"])
+
+        airllm = AirLLMBackend(model_name="dummy-70b")
+        airllm_health = airllm.health_check()
+        self.assertIn(airllm_health["status"], ["OFFLINE", "UNAVAILABLE"])
+
+    def test_mock_streaming_generation(self):
+        stream = self.mock_backend.generate_stream("Stream test")
+        tokens = list(stream)
+        self.assertGreater(len(tokens), 0)
+        joined = "".join(tokens)
+        self.assertIn("JARVIS", joined)
+
+    def test_serial_transport_framing(self):
+        from jarvis.bridge.serial_transport import SerialBridgeTransport
+        transport = SerialBridgeTransport()
+        raw_msg = transport.format_message({"hello": "world"})
+        self.assertTrue(raw_msg.endswith(b"\n"))
+
+        # Test line parsing
+        parsed = transport.parse_line(raw_msg.decode("utf-8"))
+        self.assertEqual(parsed, {"hello": "world"})
+
+        # Test request dispatch
+        req = BridgeRequest(request_id=99, action="tool_call", tool="memory.get_stats", arguments={})
+        resp = transport.dispatch_request(req, self.registry)
+        self.assertEqual(resp.request_id, 99)
+        self.assertEqual(resp.status, "SUCCESS")
 
 
 if __name__ == "__main__":

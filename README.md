@@ -57,10 +57,14 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
    - Host-side image inspection and creation utility (`scripts/jarvis_fs_tool.py`) for offline disk image verification.
 
 
-5. **AI-First Modular Host Companion**:
-   - Host-side Python companion service (`jarvis/`) communicating over serial/CLI bridge.
-   - Abstract `LLMInterface` supporting **MockLLMBackend** (offline verification), **LlamaCppBackend** (local quantized GGUF), and **AirLLMBackend** (layer-wise VRAM streaming).
-   - Secure `ToolRegistry` with explicit security allowlists, parameter validation, and timestamped audit logs.
+5. **AI-First Modular Host Companion & Autonomous Agent**:
+   - Host-side Python companion service (`jarvis/`) communicating over a versioned line-delimited JSON bridge (Protocol v1.0).
+   - Abstract `LLMInterface` with pluggable backends: **MockLLMBackend** (deterministic CI testing & simulated timeouts), **LlamaCppBackend** (local quantized GGUF inference), and **AirLLMBackend** (layer-by-layer low-VRAM execution).
+   - 8-Step Autonomous Agent loop (`JarvisAgent.run_cycle`): accepts requests, builds context, determines tools, validates schemas, requests approvals, executes safely, returns telemetry, and synthesizes answers disclosing data provenance (`LIVE_KERNEL` vs `OFFLINE_SIMULATION`).
+   - 4-Tier Security Model in `ToolRegistry`: `READ_ONLY`, `SAFE_DIAGNOSTIC`, `PRIVILEGED`, and `DESTRUCTIVE`.
+   - Mandatory user confirmation callbacks for privileged (`system.trigger_panic`) and destructive (`storage.format_disk`) operations.
+   - Enforced 10-second execution deadlines and sub-millisecond audit trails.
+   - Host CLI with `--interactive`, `--explain <concept>`, `--fs-diagnostics`, `--status`, and `--audit`.
 
 ---
 
@@ -147,6 +151,7 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 ## Documentation
 
 Detailed technical architecture and design docs are available in `docs/`:
+- [`docs/PHASE6_VERIFICATION.md`](docs/PHASE6_VERIFICATION.md): Phase 6 AI integration and local intelligence verification report.
 - [`docs/PHASE5_VERIFICATION.md`](docs/PHASE5_VERIFICATION.md): Phase 5 storage and filesystem reliability verification report.
 - [`docs/PHASE4_VERIFICATION.md`](docs/PHASE4_VERIFICATION.md): Phase 4 IPC, synchronization, and deadlocks verification report.
 - [`docs/PHASE3_VERIFICATION.md`](docs/PHASE3_VERIFICATION.md): Phase 3 process, context-switch, and memory correctness report.

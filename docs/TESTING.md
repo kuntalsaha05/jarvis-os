@@ -18,8 +18,8 @@ In accordance with the project rules:
 | Test Suite | Implementation File | Runner Target | Scope |
 |---|---|---|---|
 | **Host Algorithm Tests** | `tests/host_tests.c` | `make test` | Mathematical verification of CPU scheduling (FCFS, SJF, RR), Page Replacement (FIFO, LRU, Optimal, Belady Anomaly), Banker's algorithm, Disk head scheduling, Memory Allocation Fit (First/Best/Worst Fit), File Allocation (Contiguous, Linked, Indexed), Deadlock Detection (WFG/Matrix) & Prevention, Process lifecycle state transitions, Memory bounds, IPC subsystem/bounded queues, Mutex ownership & Semaphore invariants, Deadlock scenarios (exceed max, insufficient, unsafe rejection), Block device interface & bounds checks, JARVIS-FS filesystem correctness & rollback, and File allocation reuse & disk seek invariants. |
-| **AI Companion Tests** | `tests/test_ai.py` | `make test-ai` | Python unit tests for `MockLLMBackend`, `LlamaCppBackend` fallback, `AirLLMBackend` loading check, `ToolRegistry` allowlisting, input validation, audit logs, JSON protocol serialization, explicit `OFFLINE_SIMULATION` telemetry labeling, and host `JarvisFSImage` creation/inspection. |
-| **QEMU Smoke Test** | `scripts/qemu_smoke_test.py` | `make test-qemu` | Boots `build/jarvis.iso` headlessly, verifies 63 checkpoints covering Multiboot hand-off, memory mapping, early serial debug, preemption without yield, keyboard IRQ1 / timer IRQ0 interrupt handling, thread metrics, IPC message passing/queues, mutex ownership, counting semaphores, block device bounds, JARVIS-FS rollback/truncation/stat/df/touch/write/rm, and in-kernel benchmarks. |
+| **AI Companion Tests** | `tests/test_ai.py` | `make test-ai` | Python unit tests for `MockLLMBackend`, `LlamaCppBackend` fallback, `AirLLMBackend` loading check, `ToolRegistry` allowlisting, input validation, audit logs, JSON protocol serialization, explicit `OFFLINE_SIMULATION` telemetry labeling, host `JarvisFSImage` creation/inspection, 8-step agent cycles (`JarvisAgent`), privileged approval callbacks, destructive actions, backend health checks, streaming generation, and line-delimited serial bridge transport framing. |
+| **QEMU Smoke Test** | `scripts/qemu_smoke_test.py` | `make test-qemu` | Boots `build/jarvis.iso` headlessly, verifies 65 checkpoints covering Multiboot hand-off, memory mapping, early serial debug, preemption without yield, keyboard IRQ1 / timer IRQ0 interrupt handling, thread metrics, IPC message passing/queues, mutex ownership, counting semaphores, block device bounds, JARVIS-FS rollback/truncation/stat/df/touch/write/rm, in-kernel benchmarks, and bare-metal `ai` status command. |
 | **All Test Suites** | All of the above | `make test-all` | Runs all three test suites in sequence and reports aggregate status. |
 
 ---
@@ -64,15 +64,15 @@ make test-ai
 **Verified Output**:
 ```
 python3 -m unittest discover -s tests -p "test_*.py"
-...........
+..................
 ----------------------------------------------------------------------
-Ran 11 tests in 0.003s
+Ran 18 tests in 0.022s
 
 OK
 ```
 
 ### 3.3 Automated QEMU Smoke Test (`make test-qemu`)
-Spawns QEMU in headless mode, connects to standard I/O, feeds shell commands, and verifies output against 63 required checkpoints:
+Spawns QEMU in headless mode, connects to standard I/O, feeds shell commands, and verifies output against 65 required checkpoints:
 ```bash
 make test-qemu
 ```
@@ -81,7 +81,7 @@ make test-qemu
 ==================================================
       JARVIS-OS AUTOMATED QEMU SMOKE TEST         
 ==================================================
-Captured 16520 bytes of serial output in 14.54s.
+Captured 17614 bytes of serial output in 12.01s.
 
   [PASS] Early Serial Debug Output
   [PASS] Multiboot 0.6.96 Hand-off
@@ -146,9 +146,11 @@ Captured 16520 bytes of serial output in 14.54s.
   [PASS] Remove File
   [PASS] Filesystem Invariants Shell
   [PASS] Block Device Invariants Shell
+  [PASS] AI Status Shell Command
+  [PASS] AI Security 4-Tier Model
 
 ==================================================
-   ALL 63 VERIFICATION CHECKPOINTS PASSED!       
+   ALL 65 VERIFICATION CHECKPOINTS PASSED!       
 ==================================================
 ```
 

@@ -168,18 +168,22 @@ static void print_ai_status(void)
     terminal_write("     JARVIS AI ARCHITECTURE STATUS      \n");
     terminal_write("========================================\n");
     terminal_write("Model Integration Mode: Host-Side Companion Service\n");
-    terminal_write("Transport: Serial / CLI Communication Protocol\n");
-    terminal_write("Supported Backends:\n");
-    terminal_write("  1. MockLLMBackend   - Deterministic test & verification\n");
-    terminal_write("  2. LlamaCppBackend  - High-performance local quantized LLM\n");
-    terminal_write("  3. AirLLMBackend    - Layer-by-layer VRAM-optimized inference\n\n");
-    terminal_write("Enforced Security Allowlist:\n");
-    terminal_write("  - kernel.query_status (READ-ONLY)\n");
-    terminal_write("  - memory.get_stats    (READ-ONLY)\n");
-    terminal_write("  - scheduler.get_state (READ-ONLY)\n");
-    terminal_write("  - fs.read_file        (SANDBOXED)\n");
-    terminal_write("  * Privileged operations require explicit user approval.\n");
-    terminal_write("  * All tool calls are audited with timestamps in host log.\n");
+    terminal_write("Protocol: JSON Line-Delimited Bridge v1.0\n");
+    terminal_write("Transport: COM1 Serial Line / Host CLI Adapter\n");
+    terminal_write("Telemetry Provenance: LIVE_KERNEL / OFFLINE_SIMULATION\n");
+    terminal_write("Supported LLM Backends:\n");
+    terminal_write("  1. MockLLMBackend   - Deterministic test & CI verification\n");
+    terminal_write("  2. LlamaCppBackend  - High-performance local quantized GGUF\n");
+    terminal_write("  3. AirLLMBackend    - Layer-by-layer VRAM-optimized streaming\n\n");
+    terminal_write("Enforced Security & Permission Model:\n");
+    terminal_write("  - [READ_ONLY]       kernel.query_status, memory.get_stats,\n");
+    terminal_write("                      scheduler.get_state, storage.list_files,\n");
+    terminal_write("                      storage.read_file\n");
+    terminal_write("  - [SAFE_DIAGNOSTIC] system.execute_algorithm_demo\n");
+    terminal_write("  - [PRIVILEGED]      system.trigger_panic (Explicit approval required)\n");
+    terminal_write("  - [DESTRUCTIVE]     storage.format_disk  (Explicit approval required)\n");
+    terminal_write("  * Safety guarantees: 10s execution timeout, strict schema\n");
+    terminal_write("    validation, and audit logging with sub-millisecond timestamps.\n");
 }
 
 static void run_all_tests(void)

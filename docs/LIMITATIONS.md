@@ -61,9 +61,20 @@ To maximize clarity for students and evaluators, JARVIS-OS cleanly distinguishes
 
 ## 5. Host-Side AI Inference Boundary & Telemetry Truthfulness
 
-- **Host Service**: As designed, deep-learning models (AirLLM, llama.cpp) run as companion processes on the host workstation, not inside the bare-metal kernel.
-- **Telemetry Labeling**: When the companion is operating offline or without an active serial transport, tool registry results explicitly specify `"telemetry_source": "OFFLINE_SIMULATION"` to avoid misleading claims of real live hardware data.
-- **Offline / Mock Mode**: A mock backend is provided so the entire AI companion and tool dispatch pipeline can be tested without downloading multi-gigabyte neural network weights.
+- **Host Service Architecture**: Neural network models (AirLLM, llama.cpp) run as host-side companion services communicating across a versioned line-delimited serial bridge (Protocol v1.0). They do not execute inside the freestanding x86-64 kernel, which lacks floating-point SIMD/AVX and CUDA acceleration runtime environments.
+- **Replaceable Adapter Model**: The AI assistant code is strictly decoupled from any single model through `LLMInterface`. It provides adapters for `MockLLMBackend`, `LlamaCppBackend`, and `AirLLMBackend`.
+- **Hardware & Library Prerequisites**:
+  - `LlamaCppBackend` requires `llama-cpp-python` and a valid GGUF model weight file (configured via `JARVIS_LLAMA_MODEL`).
+  - `AirLLMBackend` requires `airllm`, PyTorch, and a CUDA-capable GPU.
+  - When dependencies or weights are not present, backends gracefully report `OFFLINE` or `UNAVAILABLE` status via `health_check()` without raising unhandled exceptions or halting test execution.
+- **Deterministic CI Testing**: `MockLLMBackend` is used during automated test runs (`make test-ai`) to ensure deterministic verification without multi-gigabyte downloads or GPU requirements.
+- **Four-Tier Tool Security & User Confirmation**:
+  - `READ_ONLY`: non-mutating queries (`kernel.query_status`, `memory.get_stats`, `storage.list_files`).
+  - `SAFE_DIAGNOSTIC`: sandboxed demonstration triggers (`system.execute_algorithm_demo`).
+  - `PRIVILEGED`: diagnostic operations with direct kernel impact (`system.trigger_panic`); requires explicit user confirmation.
+  - `DESTRUCTIVE`: disk modification operations (`storage.format_disk`); requires explicit user confirmation.
+- **Execution Deadlines (Timeouts)**: All tool dispatches are constrained to a 10.0-second execution window via `ThreadPoolExecutor` to prevent hanging the assistant.
+- **Telemetry Provenance**: Live guest serial data is tagged `"telemetry_source": "LIVE_KERNEL"`, while standalone/fallback operations are tagged `"telemetry_source": "OFFLINE_SIMULATION"`. Simulated results are never presented as real hardware telemetry.
 
 ---
 
