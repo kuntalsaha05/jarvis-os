@@ -45,6 +45,8 @@ OBJECTS = \
 	build/mouse.o \
 	build/font.o \
 	build/graphics.o \
+	build/event.o \
+	build/wm.o \
 	build/desktop.o
 
 .PHONY: all clean iso run run-headless test test-ai test-all
@@ -156,6 +158,12 @@ build/font.o: kernel/gui/font.c | build
 build/graphics.o: kernel/gui/graphics.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
+build/event.o: kernel/gui/event.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/wm.o: kernel/gui/wm.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
 build/desktop.o: kernel/gui/desktop.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
@@ -178,7 +186,7 @@ run-headless: $(ISO)
 
 test:
 	mkdir -p build
-	gcc -O2 -Wall -Wextra -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/desktop.c -o build/host_tests
+	gcc -O2 -Wall -Wextra -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/event.c kernel/gui/wm.c kernel/gui/desktop.c -o build/host_tests
 	./build/host_tests
 
 

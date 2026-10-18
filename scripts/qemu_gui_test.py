@@ -13,9 +13,12 @@ def main():
     mon_sock_path = "/tmp/qemu_gui_mon.sock"
     ppm_term = "build/desktop_term.ppm"
     ppm_sysmon = "build/desktop_sysmon.ppm"
+    ppm_files = "build/desktop_files.ppm"
+    ppm_proc = "build/desktop_proc.ppm"
     ppm_ai = "build/desktop_ai.ppm"
+    ppm_drag = "build/desktop_drag.ppm"
 
-    for path in (mon_sock_path, ppm_term, ppm_sysmon, ppm_ai):
+    for path in (mon_sock_path, ppm_term, ppm_sysmon, ppm_files, ppm_proc, ppm_ai, ppm_drag):
         if os.path.exists(path):
             try:
                 os.remove(path)
@@ -32,7 +35,7 @@ def main():
         "-mon", "chardev=mon,mode=readline"
     ]
 
-    print("[1/5] Launching QEMU with VBE/BGA Framebuffer and Monitor Socket...")
+    print("[1/7] Launching QEMU with VBE/BGA Framebuffer and Monitor Socket...")
     proc = subprocess.Popen(
         qemu_cmd,
         stdin=subprocess.PIPE,
@@ -55,37 +58,73 @@ def main():
         # Absorb monitor greeting
         mon_sock.recv(1024)
 
-        print("[2/5] Entering Native Graphical Desktop (sending 'gui' command)...")
+        print("[2/7] Entering Native Graphical Desktop (sending 'gui' command)...")
         proc.stdin.write(b"\ngui\n")
         proc.stdin.flush()
         time.sleep(1.0)
 
-        # Dump Terminal Window Screenshot
+        # 1. Dump Terminal Window Screenshot
         print("  Capturing Terminal Window screendump...")
         mon_sock.sendall(f"screendump {ppm_term}\n".encode("utf-8"))
         time.sleep(0.5)
 
-        print("[3/5] Navigating to System Monitor Window (sending TAB key)...")
+        # 2. Dump SysMon Screenshot
+        print("[3/7] Navigating to System Monitor Window (sending TAB key)...")
         proc.stdin.write(b"\t")
         proc.stdin.flush()
         time.sleep(0.5)
-
-        # Dump SysMon Screenshot
         print("  Capturing System Monitor screendump...")
         mon_sock.sendall(f"screendump {ppm_sysmon}\n".encode("utf-8"))
         time.sleep(0.5)
 
-        print("[4/5] Navigating to AI Assistant Window (sending TAB key)...")
+        # 3. Dump File Browser Screenshot
+        print("[4/7] Navigating to File Browser Window (sending TAB key)...")
         proc.stdin.write(b"\t")
         proc.stdin.flush()
         time.sleep(0.5)
+        print("  Capturing File Browser screendump...")
+        mon_sock.sendall(f"screendump {ppm_files}\n".encode("utf-8"))
+        time.sleep(0.5)
 
-        # Dump AI Chat Screenshot
+        # 4. Dump Process Monitor Screenshot
+        print("[5/7] Navigating to Process Monitor Window (sending TAB key)...")
+        proc.stdin.write(b"\t")
+        proc.stdin.flush()
+        time.sleep(0.5)
+        print("  Capturing Process Monitor screendump...")
+        mon_sock.sendall(f"screendump {ppm_proc}\n".encode("utf-8"))
+        time.sleep(0.5)
+
+        # 5. Dump AI Chat Screenshot
+        print("[6/7] Navigating to AI Assistant Window (sending TAB key)...")
+        proc.stdin.write(b"\t")
+        proc.stdin.flush()
+        time.sleep(0.5)
         print("  Capturing AI Assistant screendump...")
         mon_sock.sendall(f"screendump {ppm_ai}\n".encode("utf-8"))
         time.sleep(0.5)
 
-        print("[5/5] Returning to Text Console Shell (sending ESC key)...")
+        # 6. Test window dragging using QEMU monitor mouse commands
+        print("[7/7] Testing window dragging and returning to Text Shell...")
+        # Focus terminal window again
+        proc.stdin.write(b"\t")
+        proc.stdin.flush()
+        time.sleep(0.3)
+        # Mouse drag: move to terminal title bar (x=100, y=50), hold button 1, drag dx=150, dy=80
+        mon_sock.sendall(b"mouse_move 200 60\n")
+        time.sleep(0.2)
+        mon_sock.sendall(b"mouse_button 1\n")
+        time.sleep(0.2)
+        mon_sock.sendall(b"mouse_move 350 140\n")
+        time.sleep(0.2)
+        mon_sock.sendall(b"mouse_button 0\n")
+        time.sleep(0.5)
+
+        print("  Capturing Dragged Window screendump...")
+        mon_sock.sendall(f"screendump {ppm_drag}\n".encode("utf-8"))
+        time.sleep(0.5)
+
+        # Send ESC key to cleanly return to text console shell
         proc.stdin.write(b"\x1b")
         proc.stdin.flush()
         time.sleep(0.5)
@@ -108,7 +147,10 @@ def main():
     # Verify visual screenshots
     for name, ppm_file in [("Terminal Window", ppm_term),
                            ("System Monitor Window", ppm_sysmon),
-                           ("AI Assistant Window", ppm_ai)]:
+                           ("File Browser Window", ppm_files),
+                           ("Process Monitor Window", ppm_proc),
+                           ("AI Assistant Window", ppm_ai),
+                           ("Dragged Window", ppm_drag)]:
         if not os.path.exists(ppm_file):
             print(f"FAIL: Expected screenshot '{ppm_file}' for {name} does not exist.")
             return 1

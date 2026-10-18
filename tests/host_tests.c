@@ -22,6 +22,8 @@
 #include "drivers/mouse.h"
 #include "gui/font.h"
 #include "gui/graphics.h"
+#include "gui/event.h"
+#include "gui/wm.h"
 #include "gui/desktop.h"
 
 /* Provide stubs for terminal functions when running in host unit test mode */
@@ -68,6 +70,9 @@ void page_get_stats(page_stats_t *s) {
 }
 void scheduler_get_stats(scheduler_stats_t *s) {
     if (s) { s->context_switches = 10; s->quantum_preemptions = 2; s->voluntary_yields = 5; }
+}
+void process_get_stats(process_stats_t *s) {
+    if (s) { s->total_count = 3; s->running_count = 1; s->ready_count = 2; s->blocked_count = 0; s->terminated_count = 0; }
 }
 
 
@@ -664,7 +669,7 @@ static void test_file_alloc_and_disk_sched_invariants_host(void)
 
 static void test_gui_and_framebuffer_invariants(void)
 {
-    printf("[TEST] Framebuffer & Native GUI Invariants... ");
+    printf("[TEST] Framebuffer, Event Queue & Window Manager Invariants... ");
 
     /* 1. Framebuffer bounds and clipping invariants */
     int fb_res = test_framebuffer_invariants();
@@ -674,7 +679,15 @@ static void test_gui_and_framebuffer_invariants(void)
     int mouse_res = test_mouse_invariants();
     assert(mouse_res == 0);
 
-    /* 3. Desktop state machine, key navigation, and window cycling */
+    /* 3. Event Queue ring buffer, underflow, FIFO, and overflow handling */
+    int eq_res = test_event_queue_invariants();
+    assert(eq_res == 0);
+
+    /* 4. Window Manager creation, z-order, dragging, clipping, controls, and destruction */
+    int wm_res = test_wm_invariants();
+    assert(wm_res == 0);
+
+    /* 5. Desktop environment, applications launching, and key routing */
     int desk_res = test_desktop_invariants();
     assert(desk_res == 0);
 

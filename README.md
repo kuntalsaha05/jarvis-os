@@ -66,6 +66,15 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
    - Enforced 10-second execution deadlines and sub-millisecond audit trails.
    - Host CLI with `--interactive`, `--explain <concept>`, `--fs-diagnostics`, `--status`, and `--audit`.
 
+6. **Native Graphical Desktop & Window Manager (Phases 10 & 11)**:
+   - High-resolution VBE/Bochs BGA $1024 \times 768 \times 32\text{ bpp}$ linear framebuffer auto-discovery (`0xFD000000`).
+   - True Window Manager (`kernel/gui/wm.c` / `wm.h`) supporting window creation, destruction, z-order promotion, title bars, and boundary clipping.
+   - Interactive window controls: Minimize (`_`), Maximize (`[]`), Close (`X`), and mouse dragging.
+   - Decoupled GUI Event Queue (`kernel/gui/event.c` / `event.h`) processing mouse and keyboard events outside interrupt context.
+   - 5 Dedicated desktop applications: Graphical Terminal (`jarvis>`), System Monitor (live CPU & memory gauges), File Browser (JARVIS-FS RAMDisk explorer), Process & Scheduler Monitor, and JARVIS AI Companion.
+   - Dual-channel PS/2 mouse driver with packet decoding and hardware arrow cursor.
+   - Zero-regression console fallback: `ESC` returns cleanly to text console shell.
+
 ---
 
 ## Quickstart

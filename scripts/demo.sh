@@ -117,7 +117,7 @@ if ! make test-gui > gui_demo.log 2>&1; then
     rm -f gui_demo.log
     exit 1
 fi
-echo -e "${GREEN}  All 3 Native GUI window screendumps and input navigation passed.${NC}"
+echo -e "${GREEN}  All 6 Native GUI window screendumps and window dragging passed.${NC}"
 rm -f gui_demo.log
 
 # ------------------------------------------------------------------------------
