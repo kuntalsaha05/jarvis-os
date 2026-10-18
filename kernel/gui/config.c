@@ -30,7 +30,11 @@ void config_init_defaults(desktop_config_t *cfg)
     cfg->theme_id = THEME_JARVIS_DARK;
     cfg->taskbar_visible = 1;
     cfg->taskbar_position = 0; /* bottom */
-    cfg->startup_apps_mask = 0x1F; /* All 5 apps enabled */
+    cfg->startup_apps_mask = 0x1F; /* All 5 standard apps enabled */
+    cfg->mouse_sensitivity = 1;
+    cfg->notif_timeout_ticks = 400; /* 4 seconds at 100Hz PIT */
+    cfg->ai_backend_pref = 0; /* Ollama */
+    cfg->audio_enabled = 0; /* Audio hardware unsupported in kernel */
     cfg->checksum = calculate_checksum(cfg);
 }
 
@@ -39,16 +43,26 @@ void config_reset_defaults(desktop_config_t *cfg)
     config_init_defaults(cfg);
 }
 
+void config_update_checksum(desktop_config_t *cfg)
+{
+    if (cfg) {
+        cfg->checksum = calculate_checksum(cfg);
+    }
+}
+
 int config_validate(const desktop_config_t *cfg)
 {
     if (!cfg) return -1;
     if (cfg->magic != CONFIG_MAGIC) return -2;
     if (cfg->version != CONFIG_VERSION) return -3;
-    if (cfg->screen_width < 640 || cfg->screen_width > 3840) return -4;
-    if (cfg->screen_height < 480 || cfg->screen_height > 2160) return -5;
-    if (cfg->bpp != 16 && cfg->bpp != 24 && cfg->bpp != 32) return -6;
+    /* Supported graphics modes: only 1024x768x32bpp is supported in kernel VBE/BGA driver */
+    if (cfg->screen_width != 1024 || cfg->screen_height != 768) return -4;
+    if (cfg->bpp != 32) return -6;
     if (cfg->theme_id >= THEME_COUNT) return -7;
     if (cfg->taskbar_position > 1) return -8;
+    if (cfg->mouse_sensitivity < 1 || cfg->mouse_sensitivity > 3) return -10;
+    if (cfg->ai_backend_pref > 3) return -11;
+    if (cfg->audio_enabled != 0) return -12; /* Reject unsupported audio config */
 
     uint32_t expected_cs = calculate_checksum(cfg);
     if (cfg->checksum != expected_cs) return -9; /* Corrupted config */
@@ -131,16 +145,29 @@ int test_config_invariants(void)
     corrupt.checksum ^= 0xDEADBEEF;
     if (config_validate(&corrupt) != -9) return -4;
 
-    /* 3. Out-of-bounds resolution */
+    /* 3. Out-of-bounds / unsupported resolution */
     desktop_config_t bad_res = cfg;
-    bad_res.screen_width = 100;
+    bad_res.screen_width = 800; /* Only 1024x768 is supported */
+    bad_res.checksum = calculate_checksum(&bad_res);
     if (config_validate(&bad_res) != -4) return -5;
 
-    /* 4. Reset to defaults */
+    /* 4. Unsupported audio subsystem configuration rejection */
+    desktop_config_t bad_audio = cfg;
+    bad_audio.audio_enabled = 1; /* Audio hardware does not exist */
+    bad_audio.checksum = calculate_checksum(&bad_audio);
+    if (config_validate(&bad_audio) != -12) return -13;
+
+    /* 5. Unsupported mouse sensitivity */
+    desktop_config_t bad_mouse = cfg;
+    bad_mouse.mouse_sensitivity = 9;
+    bad_mouse.checksum = calculate_checksum(&bad_mouse);
+    if (config_validate(&bad_mouse) != -10) return -14;
+
+    /* 6. Reset to defaults */
     config_reset_defaults(&bad_res);
     if (config_validate(&bad_res) != 0) return -6;
 
-    /* 5. In-session filesystem persistence check */
+    /* 7. In-session filesystem persistence check */
     int save_res = config_save_to_fs(&cfg, "test_desk.cfg");
     if (save_res != 0) return -7;
 
@@ -148,6 +175,7 @@ int test_config_invariants(void)
     int load_res = config_load_from_fs(&loaded, "test_desk.cfg");
     if (load_res != 0) return -8;
     if (loaded.screen_width != cfg.screen_width || loaded.color_accent != cfg.color_accent) return -9;
+    if (loaded.mouse_sensitivity != cfg.mouse_sensitivity) return -15;
 
     /* Clean up test file */
     fs_delete("test_desk.cfg");

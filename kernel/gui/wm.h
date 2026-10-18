@@ -17,7 +17,8 @@ typedef enum {
     WINDOW_TYPE_FILES    = 2,
     WINDOW_TYPE_PROC     = 3,
     WINDOW_TYPE_AI_CHAT  = 4,
-    WINDOW_TYPE_CUSTOM   = 5
+    WINDOW_TYPE_SETTINGS = 5,
+    WINDOW_TYPE_CUSTOM   = 6
 } window_type_t;
 
 typedef enum {

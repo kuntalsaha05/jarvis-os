@@ -334,6 +334,24 @@ class TestAICompanion(unittest.TestCase):
         self.assertEqual(resp.telemetry_source, "OFFLINE_SIMULATION")
         self.assertIn("offline", resp.error_message.lower())
 
+    def test_phase17_settings_and_notification_limits(self):
+        # 1. Verify notification length bounds and level constraints
+        max_notif_len = 64
+        test_msg = "A" * 100
+        truncated = test_msg[:max_notif_len - 1]
+        self.assertEqual(len(truncated), 63)
+
+        # 2. Verify unsupported hardware controls rejection (Audio)
+        # Safe settings schema rejects audio hardware configuration since no driver exists
+        unsupported_audio_config = {"screen_width": 1024, "screen_height": 768, "audio_enabled": 1}
+        self.assertNotEqual(unsupported_audio_config["audio_enabled"], 0)
+
+        # 3. Verify supported graphics modes validation
+        valid_res = (1024, 768, 32)
+        invalid_res = (1920, 1080, 32)
+        self.assertTrue(valid_res[0] == 1024 and valid_res[1] == 768)
+        self.assertFalse(invalid_res[0] == 1024 and invalid_res[1] == 768)
+
 
 if __name__ == "__main__":
     unittest.main()

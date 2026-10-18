@@ -16,9 +16,10 @@ def main():
     ppm_files = "build/desktop_files.ppm"
     ppm_proc = "build/desktop_proc.ppm"
     ppm_ai = "build/desktop_ai.ppm"
+    ppm_settings = "build/desktop_settings.ppm"
     ppm_drag = "build/desktop_drag.ppm"
 
-    for path in (mon_sock_path, ppm_term, ppm_sysmon, ppm_files, ppm_proc, ppm_ai, ppm_drag):
+    for path in (mon_sock_path, ppm_term, ppm_sysmon, ppm_files, ppm_proc, ppm_ai, ppm_settings, ppm_drag):
         if os.path.exists(path):
             try:
                 os.remove(path)
@@ -96,7 +97,7 @@ def main():
         time.sleep(0.5)
 
         # 5. Dump AI Chat Screenshot
-        print("[6/7] Navigating to AI Assistant Window (sending TAB key)...")
+        print("[6/8] Navigating to AI Assistant Window (sending TAB key)...")
         proc.stdin.write(b"\t")
         proc.stdin.flush()
         time.sleep(0.5)
@@ -104,8 +105,20 @@ def main():
         mon_sock.sendall(f"screendump {ppm_ai}\n".encode("utf-8"))
         time.sleep(0.5)
 
-        # 6. Test window dragging using QEMU monitor mouse commands
-        print("[7/7] Testing window dragging and returning to Text Shell...")
+        # 6. Launch Settings Window via clicking taskbar '6: Sett' button (x=550, y=750)
+        print("[7/8] Launching Settings Window (clicking taskbar button)...")
+        mon_sock.sendall(b"mouse_move 550 750\n")
+        time.sleep(0.2)
+        mon_sock.sendall(b"mouse_button 1\n")
+        time.sleep(0.2)
+        mon_sock.sendall(b"mouse_button 0\n")
+        time.sleep(0.5)
+        print("  Capturing Settings Window screendump...")
+        mon_sock.sendall(f"screendump {ppm_settings}\n".encode("utf-8"))
+        time.sleep(0.5)
+
+        # 7. Test window dragging using QEMU monitor mouse commands
+        print("[8/8] Testing window dragging and returning to Text Shell...")
         # Focus terminal window again
         proc.stdin.write(b"\t")
         proc.stdin.flush()
@@ -150,6 +163,7 @@ def main():
                            ("File Browser Window", ppm_files),
                            ("Process Monitor Window", ppm_proc),
                            ("AI Assistant Window", ppm_ai),
+                           ("Settings Window", ppm_settings),
                            ("Dragged Window", ppm_drag)]:
         if not os.path.exists(ppm_file):
             print(f"FAIL: Expected screenshot '{ppm_file}' for {name} does not exist.")

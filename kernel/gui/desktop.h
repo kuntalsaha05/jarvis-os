@@ -7,6 +7,7 @@
 #include "event.h"
 #include "app.h"
 #include "config.h"
+#include "notification.h"
 
 typedef struct {
     int is_running;
@@ -37,12 +38,17 @@ typedef struct {
     char file_preview[256];
     uint32_t file_preview_len;
 
-    /* Window IDs for the 5 standard apps */
+    /* Settings Application State */
+    uint32_t settings_active_tab;
+    char settings_status_msg[64];
+
+    /* Window IDs for standard apps */
     int win_term_id;
     int win_sysmon_id;
     int win_files_id;
     int win_proc_id;
     int win_ai_id;
+    int win_settings_id;
 } desktop_env_t;
 
 void desktop_init(void);
@@ -55,8 +61,13 @@ void desktop_launch_sysmon(void);
 void desktop_launch_files(void);
 void desktop_launch_proc(void);
 void desktop_launch_ai(void);
+void desktop_launch_settings(void);
 
 void desktop_cycle_theme(void);
+void desktop_settings_set_tab(uint32_t tab);
+void desktop_settings_cycle_accent(void);
+void desktop_settings_cycle_mouse_sensitivity(void);
+void desktop_settings_cycle_ai_backend(void);
 int desktop_save_settings(void);
 void desktop_reset_settings(void);
 

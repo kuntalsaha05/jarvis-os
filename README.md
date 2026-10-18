@@ -66,15 +66,17 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
    - Enforced 10-second execution deadlines and sub-millisecond audit trails.
    - Host CLI with `--interactive`, `--explain <concept>`, `--fs-diagnostics`, `--status`, and `--audit`.
 
-6. **Native Graphical Desktop, Window Manager & AI Desktop Experience (Phases 10, 11, 12 & 16)**:
+6. **Native Graphical Desktop, Window Manager, Settings & Notification Subsystems (Phases 10, 11, 12, 16 & 17)**:
    - High-resolution VBE/Bochs BGA $1024 \times 768 \times 32\text{ bpp}$ linear framebuffer auto-discovery (`0xFD000000`).
    - True Window Manager (`kernel/gui/wm.c` / `wm.h`) supporting window creation, destruction, z-order promotion, title bars, and boundary clipping.
    - Interactive window controls: Minimize (`_`), Maximize (`[]`), Close (`X`), and mouse dragging.
    - Decoupled GUI Event Queue (`kernel/gui/event.c` / `event.h`) processing mouse and keyboard events outside interrupt context.
    - Reusable GUI Application Framework (`kernel/gui/app.c` / `app.h`) with lifecycle states (`REGISTERED`, `RUNNING`, `MINIMIZED`, `STOPPED`), duplicate ID rejection, and clean resource destruction.
-   - Desktop Configuration & Persistence Subsystem (`kernel/gui/config.c` / `config.h`): versioned `desktop.cfg` format with magic header (`0x4A434647`), checksum validation, safe defaults fallback, and 3 desktop themes (JARVIS Dark, Cyberpunk, Classic Slate).
-   - 5 Dedicated desktop applications: Graphical Terminal (`jarvis>`), System Monitor (live CPU & memory gauges), File Browser (JARVIS-FS RAMDisk explorer), Process & Scheduler Monitor, and JARVIS AI Companion.
+   - Desktop Configuration & Persistence Subsystem (`kernel/gui/config.c` / `config.h`): versioned `desktop.cfg` format (Schema v2) with magic header (`0x4A434647`), checksum validation, safe defaults fallback, mouse sensitivity scaling, notification timeouts, AI backend preference, and 3 desktop themes (JARVIS Dark, Cyberpunk, Classic Slate).
+   - 6 Dedicated desktop applications: Graphical Terminal (`jarvis>`), System Monitor (live CPU & memory gauges), File Browser (JARVIS-FS RAMDisk explorer), Process & Scheduler Monitor, JARVIS AI Companion, and Modular System Settings (`APP_ID_SETTINGS = 6`).
    - Interactive AI Desktop Companion Window (`desktop.c` / `desktop.h`): 24-line scrollable chat history, live kernel telemetry inspection (`timer_ticks`, `page_get_stats`, `scheduler_get_stats`, `fs_get_inode`), 4-tier allowlist sandbox, interactive privileged/destructive action confirmation (`/panic`, `/format` -> `/confirm <action>`), provenance labeling (`[LIVE_KERNEL]`, `[HOST_AI_MODEL]`), and nonblocking interrupt-safe rendering.
+   - Modular System Settings Window: 6 modular configuration tabs (Display, Appearance, Input, Audio, AI Backend, System Info) with explicit hardware disclosure (audio unbacked notice, fixed $1024 \times 768$ mode disclosure, and RAMDisk volatility warnings).
+   - Bounded Notification Subsystem (`kernel/gui/notification.c` / `notification.h`): ring buffer capped at 8 entries, severity categorization (`INFO`, `WARN`, `ERROR`), tick-based automatic expiration, oldest non-critical eviction under pressure, visual toast overlays with dismissal buttons (`[X]`), top-bar badge count, and zero-stall event handling.
    - Dual-channel PS/2 mouse driver with packet decoding and hardware arrow cursor.
    - Zero-regression console fallback: `ESC` returns cleanly to text console shell.
 
@@ -195,6 +197,7 @@ Detailed technical architecture, reports, and design docs are available in `docs
 - [`docs/PRESENTATION_OUTLINE.md`](docs/PRESENTATION_OUTLINE.md): Engineering defense and presentation slide outline with anticipated Q&A.
 
 ### Phase Verification Reports
+- [`docs/PHASE17_SETTINGS_NOTIFICATIONS.md`](docs/PHASE17_SETTINGS_NOTIFICATIONS.md): Phase 17 modular system settings application, configuration schema v2, and bounded notification subsystem report.
 - [`docs/PHASE16_AI_DESKTOP.md`](docs/PHASE16_AI_DESKTOP.md): Phase 16 AI desktop experience, live kernel telemetry, and allowlist sandbox security report.
 - [`docs/PHASE13_STABILITY_REPORT.md`](docs/PHASE13_STABILITY_REPORT.md): Phase 13 security audit, stability hardening, stress testing, and performance baselines report.
 - [`docs/PHASE12_APP_FRAMEWORK.md`](docs/PHASE12_APP_FRAMEWORK.md): Phase 12 application framework, desktop configuration, themes, and persistence report.

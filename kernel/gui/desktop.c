@@ -628,6 +628,306 @@ static void render_ai_content(void *ctx, window_t *win, int is_focused)
 }
 
 /* -------------------------------------------------------------
+ * Application 6: System Settings & Diagnostics (Phase 17)
+ * ------------------------------------------------------------- */
+void desktop_settings_set_tab(uint32_t tab)
+{
+    if (tab < 6) g_desk.settings_active_tab = tab;
+}
+
+void desktop_settings_cycle_accent(void)
+{
+    if (g_desk.config.color_accent == FB_COLOR_CYAN_ACCENT) {
+        g_desk.config.color_accent = FB_COLOR_GREEN;
+    } else if (g_desk.config.color_accent == FB_COLOR_GREEN) {
+        g_desk.config.color_accent = 0x00FFA500; /* Amber */
+    } else {
+        g_desk.config.color_accent = FB_COLOR_CYAN_ACCENT;
+    }
+    notif_post(NOTIF_LEVEL_INFO, "Accent Updated", "Desktop accent color changed", 200);
+}
+
+void desktop_settings_cycle_mouse_sensitivity(void)
+{
+    g_desk.config.mouse_sensitivity = (g_desk.config.mouse_sensitivity % 3) + 1;
+    notif_post(NOTIF_LEVEL_INFO, "Mouse Sensitivity", "Updated pointer sensitivity", 200);
+}
+
+void desktop_settings_cycle_ai_backend(void)
+{
+    g_desk.config.ai_backend_pref = (g_desk.config.ai_backend_pref + 1) % 4;
+    const char *names[4] = { "Ollama (llama3)", "Llama.cpp (GGUF)", "AirLLM (Low-VRAM)", "Mock (CI Offline)" };
+    notif_post(NOTIF_LEVEL_INFO, "AI Backend Preferred", names[g_desk.config.ai_backend_pref], 300);
+}
+
+static void render_settings_content(void *ctx, window_t *win, int is_focused)
+{
+    (void)ctx;
+    (void)is_focused;
+    uint32_t cx = (uint32_t)win->x + 6;
+    uint32_t cy = (uint32_t)win->y + WM_TITLE_BAR_HEIGHT + 2;
+    uint32_t cw = win->width - 12;
+    uint32_t ch = win->height - WM_TITLE_BAR_HEIGHT - 6;
+
+    fb_fill_rect(cx, cy, cw, ch, FB_COLOR_BLACK);
+
+    /* 1. Modular Tab Bar across top */
+    const char *tabs[6] = { "1:Display", "2:Appear", "3:Input", "4:Audio", "5:AI Backend", "6:About" };
+    uint32_t tab_w = cw / 6;
+    for (uint32_t i = 0; i < 6; i++) {
+        uint32_t tx = cx + i * tab_w;
+        int active = (g_desk.settings_active_tab == i);
+        uint32_t bg = active ? g_desk.config.color_accent : FB_COLOR_DARK_GRAY;
+        uint32_t fg = active ? FB_COLOR_BLACK : FB_COLOR_WHITE;
+        fb_fill_rect(tx + 1, cy + 2, tab_w - 2, 22, bg);
+        gfx_draw_string(tx + 4, cy + 6, tabs[i], fg, bg);
+    }
+
+    fb_fill_rect(cx + 2, cy + 26, cw - 4, 1, FB_COLOR_DARK_GRAY);
+
+    /* 2. Content Pane based on active tab */
+    uint32_t py = cy + 34;
+    uint32_t px = cx + 12;
+
+    switch (g_desk.settings_active_tab) {
+        case 0: /* Display & Graphics */
+            gfx_draw_string(px, py, "[DISPLAY & GRAPHICS SUBSYSTEM]", g_desk.config.color_accent, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 22, "Linear Framebuffer: Bochs BGA / VESA VBE 2.0 (Physical BAR0: 0xFD000000)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 40, "Active Resolution:  1024 x 768 @ 32 bpp (ARGB8888)", FB_COLOR_GREEN, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 58, "Hardware Pitch:     4096 bytes/scanline (Single Linear Buffer)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 80, "[SUPPORTED MODES IN KERNEL DRIVER]", FB_COLOR_CYAN_ACCENT, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 98, "* Mode 0: 1024x768x32bpp  [ACTIVE & VERIFIED]", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 116, "  Mode 1: 800x600x32bpp   [UNSUPPORTED - Rejected by Driver]", FB_COLOR_GRAY, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 134, "  Mode 2: 1280x1024x32bpp [UNSUPPORTED - Rejected by Driver]", FB_COLOR_GRAY, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 160, "Note: Kernel uses fixed linear VBE mapping; dynamic mode switches unsupported.", FB_COLOR_YELLOW, FB_COLOR_BLACK);
+            break;
+
+        case 1: /* Appearance & Themes */
+            gfx_draw_string(px, py, "[DESKTOP APPEARANCE & THEME ENGINE]", g_desk.config.color_accent, FB_COLOR_BLACK);
+            char theme_line[64];
+            const char *theme_names[3] = { "JARVIS Dark (Default)", "Cyberpunk Cyan", "Classic Slate" };
+            str_copy(theme_line, "Active Theme:  ", sizeof(theme_line));
+            uint32_t tlen = 0; while (theme_line[tlen]) tlen++;
+            str_copy(theme_line + tlen, theme_names[g_desk.config.theme_id % 3], 32);
+            gfx_draw_string(px, py + 22, theme_line, FB_COLOR_WHITE, FB_COLOR_BLACK);
+
+            char accent_line[64];
+            const char *accent_name = (g_desk.config.color_accent == FB_COLOR_CYAN_ACCENT) ? "Cyan (0x00E0E0)" :
+                                     ((g_desk.config.color_accent == FB_COLOR_GREEN) ? "Emerald Green (0x00FF88)" : "Amber (0xFFA500)");
+            str_copy(accent_line, "Accent Color:  ", sizeof(accent_line));
+            uint32_t alen = 0; while (accent_line[alen]) alen++;
+            str_copy(accent_line + alen, accent_name, 32);
+            gfx_draw_string(px, py + 40, accent_line, g_desk.config.color_accent, FB_COLOR_BLACK);
+
+            gfx_draw_string(px, py + 58, (g_desk.config.taskbar_position == 0) ? "Taskbar Pos:   Bottom (0)" : "Taskbar Pos:   Top (1)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+
+            gfx_draw_string(px, py + 90, "[INTERACTIVE CONTROLS]", FB_COLOR_CYAN_ACCENT, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 110, "Press [T] -> Cycle Theme (Dark -> Cyberpunk -> Classic)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 128, "Press [A] -> Cycle Accent Color (Cyan -> Green -> Amber)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 146, "Press [P] -> Toggle Taskbar Position (Bottom / Top)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            break;
+
+        case 2: /* Input (Kbd & Mouse) */
+            gfx_draw_string(px, py, "[INPUT SUBSYSTEMS (KEYBOARD & MOUSE)]", g_desk.config.color_accent, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 22, "Keyboard: Standard PS/2 Controller (IRQ1, Ports 0x60/0x64)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 40, "Queue:    64-Byte Circular Scancode Buffer, Decoupled ISR", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 62, "Mouse:    Dual-Channel PS/2 (IRQ12, 3-Byte Packet Stream)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 80, "Cursor:   Hardware Arrow Overlay (1024x768 Clamped)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+
+            char sens_line[64];
+            str_copy(sens_line, "Sensitivity: ", sizeof(sens_line));
+            uint32_t slen = 0; while (sens_line[slen]) slen++;
+            sens_line[slen++] = '0' + (char)g_desk.config.mouse_sensitivity;
+            sens_line[slen++] = 'x';
+            sens_line[slen] = '\0';
+            str_copy(sens_line + slen, (g_desk.config.mouse_sensitivity == 1) ? " (Standard)" : ((g_desk.config.mouse_sensitivity == 2) ? " (Fast)" : " (Ultra)"), 20);
+            gfx_draw_string(px, py + 102, sens_line, FB_COLOR_GREEN, FB_COLOR_BLACK);
+
+            gfx_draw_string(px, py + 130, "[CONTROLS]", FB_COLOR_CYAN_ACCENT, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 150, "Press [M] -> Cycle Mouse Sensitivity (1x -> 2x -> 3x)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            break;
+
+        case 3: /* Audio Subsystem */
+            gfx_draw_string(px, py, "[AUDIO SUBSYSTEM STATUS]", 0x00FF8800, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 24, "Hardware Detection: NO AUDIO CONTROLLER DETECTED", 0x00FF3333, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 44, "Supported Hardware: AC97 / SoundBlaster 16 / Intel HDA", FB_COLOR_GRAY, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 64, "Driver State:       UNSUPPORTED (No driver compiled in kernel)", FB_COLOR_GRAY, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 94, "Security & Stability Policy:", FB_COLOR_CYAN_ACCENT, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 114, "* Audio controls and mixer sliders are disabled by design.", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 132, "* Phase 17 strictly forbids exposing non-existent hardware controls.", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            break;
+
+        case 4: /* AI Backend */
+            gfx_draw_string(px, py, "[AI BACKEND SELECTION & PROTOCOL STATUS]", g_desk.config.color_accent, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 22, "Bridge Transport:   COM1 Serial Bridge v1.0 (0x3F8, 115200 baud)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 40, "Active Model:       ", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px + 160, py + 40, g_desk.ai_backend_model, FB_COLOR_GREEN, FB_COLOR_BLACK);
+
+            const char *backends[4] = { "0: Ollama Daemon (http://localhost:11434 / llama3)",
+                                        "1: Llama.cpp (Local Quantized GGUF)",
+                                        "2: AirLLM (Layer-by-Layer Low-VRAM)",
+                                        "3: Mock Backend (Offline Deterministic CI)" };
+            gfx_draw_string(px, py + 62, "Preferred Backend:  ", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px + 160, py + 62, backends[g_desk.config.ai_backend_pref % 4], FB_COLOR_CYAN_ACCENT, FB_COLOR_BLACK);
+
+            gfx_draw_string(px, py + 84, "Connection Status:  ", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px + 160, py + 84, g_desk.ai_backend_status, g_desk.ai_is_connected ? FB_COLOR_GREEN : 0x00FF8800, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 106, "Security Model:     4-Tier Allowlist Sandbox (Gated Authorizations)", FB_COLOR_YELLOW, FB_COLOR_BLACK);
+
+            gfx_draw_string(px, py + 136, "[CONTROLS]", FB_COLOR_CYAN_ACCENT, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 154, "Press [B] -> Cycle Preferred Backend (Ollama -> Llama -> AirLLM -> Mock)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            break;
+
+        case 5: /* About & Diagnostics */
+            gfx_draw_string(px, py, "[SYSTEM INFORMATION & DIAGNOSTICS]", g_desk.config.color_accent, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 20, "Operating System: JARVIS-OS v1.0.0-RC1 (Educational Kernel)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 38, "Architecture:     x86-64 Long Mode (AMD64, Ring 0 Monolithic)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 56, "Boot Protocol:    Multiboot 0.6.96 Specification / GRUB 2.06", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 74, "Timer Subsystem:  PIT 100 Hz Preemptive Round-Robin (5-Tick Quantum)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+
+            char uptime_str[64];
+            str_copy(uptime_str, "Kernel Uptime:    ", sizeof(uptime_str));
+            uint32_t ulen = 0; while (uptime_str[ulen]) ulen++;
+            uint_to_str((uint32_t)timer_ticks, uptime_str + ulen, sizeof(uptime_str) - ulen);
+            while (uptime_str[ulen]) ulen++;
+            str_copy(uptime_str + ulen, " ticks (PIT IRQ0)", 20);
+            gfx_draw_string(px, py + 92, uptime_str, FB_COLOR_GREEN, FB_COLOR_BLACK);
+
+            gfx_draw_string(px, py + 110, "Storage Volume:   JARVIS-FS (64 KiB RAMDisk Backing)", FB_COLOR_WHITE, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 130, "[VOLATILITY DISCLOSURE]", 0x00FF8800, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 148, "* Configuration is saved to /desktop.cfg on RAMDisk volume.", FB_COLOR_YELLOW, FB_COLOR_BLACK);
+            gfx_draw_string(px, py + 166, "* Since storage is RAM-backed, settings will reset upon cold reboot.", FB_COLOR_YELLOW, FB_COLOR_BLACK);
+            break;
+    }
+
+    /* 3. Bottom Action Bar: Save, Reset, Status */
+    uint32_t bar_y = cy + ch - 32;
+    fb_fill_rect(cx + 4, bar_y - 2, cw - 8, 1, FB_COLOR_DARK_GRAY);
+
+    gfx_draw_button(cx + 12, bar_y + 2, 140, 24, "Save [S]", 0);
+    gfx_draw_button(cx + 160, bar_y + 2, 150, 24, "Reset Defaults [R]", 0);
+
+    gfx_draw_string(cx + 320, bar_y + 8, g_desk.settings_status_msg, FB_COLOR_GRAY, FB_COLOR_BLACK);
+}
+
+static void settings_key_handler(void *ctx, window_t *win, char c)
+{
+    (void)ctx;
+    (void)win;
+    if (c >= '1' && c <= '6') {
+        g_desk.settings_active_tab = c - '1';
+    } else if (c == 't' || c == 'T') {
+        desktop_cycle_theme();
+    } else if (c == 'a' || c == 'A') {
+        desktop_settings_cycle_accent();
+    } else if (c == 'p' || c == 'P') {
+        g_desk.config.taskbar_position = !g_desk.config.taskbar_position;
+        notif_post(NOTIF_LEVEL_INFO, "Taskbar Position", (g_desk.config.taskbar_position == 0) ? "Moved to Bottom" : "Moved to Top", 200);
+    } else if (c == 'm' || c == 'M') {
+        desktop_settings_cycle_mouse_sensitivity();
+    } else if (c == 'b' || c == 'B') {
+        desktop_settings_cycle_ai_backend();
+    } else if (c == 's' || c == 'S') {
+        desktop_save_settings();
+    } else if (c == 'r' || c == 'R') {
+        desktop_reset_settings();
+    }
+}
+
+static void settings_click_handler(void *ctx, window_t *win, int32_t rel_x, int32_t rel_y, uint8_t buttons)
+{
+    (void)ctx;
+    (void)buttons;
+    uint32_t cw = win->width - 12;
+    uint32_t ch = win->height - WM_TITLE_BAR_HEIGHT - 6;
+
+    /* 1. Click on Tab Bar */
+    if (rel_y >= 2 && rel_y < 26) {
+        uint32_t tab_w = cw / 6;
+        if (tab_w > 0) {
+            uint32_t clicked_tab = rel_x / tab_w;
+            if (clicked_tab < 6) {
+                g_desk.settings_active_tab = clicked_tab;
+            }
+        }
+        return;
+    }
+
+    /* 2. Click in Bottom Action Bar */
+    uint32_t bar_y = ch - 32;
+    if (rel_y >= (int32_t)bar_y && rel_y < (int32_t)(bar_y + 26)) {
+        if (rel_x >= 12 && rel_x < 152) {
+            desktop_save_settings();
+        } else if (rel_x >= 160 && rel_x < 310) {
+            desktop_reset_settings();
+        }
+        return;
+    }
+
+    /* 3. Click inside section controls */
+    if (g_desk.settings_active_tab == 1) {
+        if (rel_y >= 105 && rel_y < 125) desktop_cycle_theme();
+        else if (rel_y >= 125 && rel_y < 145) desktop_settings_cycle_accent();
+        else if (rel_y >= 145 && rel_y < 165) {
+            g_desk.config.taskbar_position = !g_desk.config.taskbar_position;
+            notif_post(NOTIF_LEVEL_INFO, "Taskbar Position", (g_desk.config.taskbar_position == 0) ? "Moved to Bottom" : "Moved to Top", 200);
+        }
+    } else if (g_desk.settings_active_tab == 2) {
+        if (rel_y >= 145 && rel_y < 170) desktop_settings_cycle_mouse_sensitivity();
+    } else if (g_desk.settings_active_tab == 4) {
+        if (rel_y >= 150 && rel_y < 175) desktop_settings_cycle_ai_backend();
+    }
+}
+
+/* -------------------------------------------------------------
+ * Notification Subsystem Rendering (Phase 17)
+ * ------------------------------------------------------------- */
+static void desktop_render_notifications(uint32_t screen_w, uint32_t screen_h)
+{
+    (void)screen_h;
+    const notif_queue_t *q = notif_get_queue();
+    if (!q || q->active_count == 0) return;
+
+    int rendered = 0;
+    /* Draw up to 3 active notifications from highest index downward */
+    for (int i = NOTIF_MAX_ENTRIES - 1; i >= 0 && rendered < 3; i--) {
+        const notification_t *item = &q->items[i];
+        if (!item->is_active) continue;
+
+        uint32_t toast_x = screen_w - 330;
+        uint32_t toast_y = WM_TOP_BAR_HEIGHT + 6 + (rendered * 62);
+        uint32_t toast_w = 320;
+        uint32_t toast_h = 56;
+
+        uint32_t border_col = FB_COLOR_CYAN_ACCENT;
+        const char *badge = "[INFO] ";
+        if (item->level == NOTIF_LEVEL_WARN) {
+            border_col = 0x00FFA500; /* Amber */
+            badge = "[WARN] ";
+        } else if (item->level == NOTIF_LEVEL_ERROR) {
+            border_col = 0x00FF3333; /* Red */
+            badge = "[ERR]  ";
+        }
+
+        /* Toast background and border */
+        fb_fill_rect(toast_x, toast_y, toast_w, toast_h, 0x0010101C);
+        fb_draw_rect_outline(toast_x, toast_y, toast_w, toast_h, border_col, 2);
+
+        /* Dismiss button indicator in top-right */
+        gfx_draw_string(toast_x + toast_w - 24, toast_y + 4, "[X]", FB_COLOR_GRAY, 0x0010101C);
+
+        /* Badge and Title */
+        gfx_draw_string(toast_x + 8, toast_y + 6, badge, border_col, 0x0010101C);
+        gfx_draw_string(toast_x + 64, toast_y + 6, item->title, FB_COLOR_WHITE, 0x0010101C);
+
+        /* Message */
+        gfx_draw_string(toast_x + 8, toast_y + 28, item->message, FB_COLOR_GRAY, 0x0010101C);
+
+        rendered++;
+    }
+}
+
+/* -------------------------------------------------------------
  * Application Framework Registration & Launchers
  * ------------------------------------------------------------- */
 void desktop_launch_terminal(void) { app_launch(APP_ID_TERMINAL); }
@@ -635,6 +935,7 @@ void desktop_launch_sysmon(void)   { app_launch(APP_ID_SYSMON); }
 void desktop_launch_files(void)    { app_launch(APP_ID_FILES); }
 void desktop_launch_proc(void)     { app_launch(APP_ID_PROC); }
 void desktop_launch_ai(void)       { app_launch(APP_ID_AI); }
+void desktop_launch_settings(void) { app_launch(APP_ID_SETTINGS); }
 
 void desktop_cycle_theme(void)
 {
@@ -653,20 +954,35 @@ void desktop_cycle_theme(void)
         g_desk.config.color_accent     = 0x004A90E2; /* Classic Blue */
     }
     g_desk.bg_color = g_desk.config.color_desktop_bg;
+    config_update_checksum(&g_desk.config);
     config_apply(&g_desk.config);
     config_save_to_fs(&g_desk.config, CONFIG_FILE_PATH);
+    notif_post(NOTIF_LEVEL_INFO, "Theme Switched", "Updated desktop theme", 250);
 }
 
 int desktop_save_settings(void)
 {
-    return config_save_to_fs(&g_desk.config, CONFIG_FILE_PATH);
+    g_desk.config.color_desktop_bg = g_desk.bg_color;
+    config_update_checksum(&g_desk.config);
+    int res = config_save_to_fs(&g_desk.config, CONFIG_FILE_PATH);
+    if (res == 0) {
+        str_copy(g_desk.settings_status_msg, "Settings saved to /desktop.cfg (RAMDisk).", sizeof(g_desk.settings_status_msg));
+        notif_post(NOTIF_LEVEL_INFO, "Settings Saved", "Saved to /desktop.cfg (RAMDisk)", 300);
+    } else {
+        str_copy(g_desk.settings_status_msg, "Failed to save settings to filesystem.", sizeof(g_desk.settings_status_msg));
+        notif_post(NOTIF_LEVEL_ERROR, "Save Failed", "Filesystem error saving desktop.cfg", 300);
+    }
+    return res;
 }
 
 void desktop_reset_settings(void)
 {
     config_reset_defaults(&g_desk.config);
     g_desk.bg_color = g_desk.config.color_desktop_bg;
+    config_update_checksum(&g_desk.config);
     config_save_to_fs(&g_desk.config, CONFIG_FILE_PATH);
+    str_copy(g_desk.settings_status_msg, "Factory defaults restored.", sizeof(g_desk.settings_status_msg));
+    notif_post(NOTIF_LEVEL_WARN, "Defaults Restored", "Settings reverted to safe defaults", 300);
 }
 
 void desktop_init(void)
@@ -697,6 +1013,9 @@ void desktop_init(void)
     g_desk.ai_is_streaming = 0;
     g_desk.ai_is_connected = 1;
     g_desk.ai_requests_count = 0;
+    notif_init();
+    g_desk.settings_active_tab = 0;
+    str_copy(g_desk.settings_status_msg, "Ready. Use 1-6 or Click to view sections.", sizeof(g_desk.settings_status_msg));
     str_copy(g_desk.ai_backend_model, "gemma3:1b", sizeof(g_desk.ai_backend_model));
     str_copy(g_desk.ai_backend_status, "ONLINE", sizeof(g_desk.ai_backend_status));
 
@@ -770,6 +1089,22 @@ void desktop_init(void)
     };
     app_register(&desc_ai);
 
+    app_desc_t desc_settings = {
+        .app_id = APP_ID_SETTINGS,
+        .name = "System Settings & Diagnostics",
+        .category = "System",
+        .icon_label = "6: Sett",
+        .default_x = 180, .default_y = 100, .default_w = 640, .default_h = 440,
+        .win_type = WINDOW_TYPE_SETTINGS,
+        .render = render_settings_content,
+        .handle_key = settings_key_handler,
+        .handle_click = settings_click_handler
+    };
+    app_register(&desc_settings);
+
+    /* Post Initial Boot Notification */
+    notif_post(NOTIF_LEVEL_INFO, "JARVIS-OS Online", "Desktop & WM ready. COM1 active.", 500);
+
     /* 4. Launch Startup Applications based on configuration mask */
     if (g_desk.config.startup_apps_mask & 0x01) app_launch(APP_ID_TERMINAL);
     if (g_desk.config.startup_apps_mask & 0x02) app_launch(APP_ID_SYSMON);
@@ -799,10 +1134,23 @@ static void render_top_bar(uint32_t screen_w)
         gfx_draw_string(230 + 8 * 20, 4, "]", FB_COLOR_GRAY, FB_COLOR_DARK_GRAY);
     }
 
+    /* Notification Badge */
+    uint32_t notif_cnt = notif_get_active_count();
+    char notif_badge[24];
+    str_copy(notif_badge, "[Notifs: ", sizeof(notif_badge));
+    uint32_t nlen = 0; while (notif_badge[nlen]) nlen++;
+    uint_to_str(notif_cnt, notif_badge + nlen, sizeof(notif_badge) - nlen);
+    while (notif_badge[nlen]) nlen++;
+    notif_badge[nlen++] = ']';
+    notif_badge[nlen] = '\0';
+
+    uint32_t notif_fg = (notif_cnt == 0) ? FB_COLOR_GRAY : 0x00FFA500;
+    gfx_draw_string(screen_w - 410, 4, notif_badge, notif_fg, FB_COLOR_DARK_GRAY);
+
     /* Uptime and Architecture */
-    gfx_draw_string(screen_w - 300, 4, "Ticks: ", FB_COLOR_GRAY, FB_COLOR_DARK_GRAY);
-    gfx_draw_number(screen_w - 245, 4, timer_ticks, FB_COLOR_WHITE, FB_COLOR_DARK_GRAY);
-    gfx_draw_string(screen_w - 180, 4, "| x86-64 Long Mode", FB_COLOR_GREEN, FB_COLOR_DARK_GRAY);
+    gfx_draw_string(screen_w - 290, 4, "Ticks: ", FB_COLOR_GRAY, FB_COLOR_DARK_GRAY);
+    gfx_draw_number(screen_w - 235, 4, timer_ticks, FB_COLOR_WHITE, FB_COLOR_DARK_GRAY);
+    gfx_draw_string(screen_w - 170, 4, "| x86-64 Long Mode", FB_COLOR_GREEN, FB_COLOR_DARK_GRAY);
 }
 
 static void render_taskbar(uint32_t screen_w, uint32_t screen_h)
@@ -821,15 +1169,17 @@ static void render_taskbar(uint32_t screen_w, uint32_t screen_h)
     app_instance_t *a3 = app_get_by_id(APP_ID_FILES);
     app_instance_t *a4 = app_get_by_id(APP_ID_PROC);
     app_instance_t *a5 = app_get_by_id(APP_ID_AI);
+    app_instance_t *a6 = app_get_by_id(APP_ID_SETTINGS);
 
-    gfx_draw_button(8,   tb_y + 4, 100, 24, "1: Term",   a1 && a1->window_id == cur_win_id);
-    gfx_draw_button(114, tb_y + 4, 100, 24, "2: SysMon", a2 && a2->window_id == cur_win_id);
-    gfx_draw_button(220, tb_y + 4, 100, 24, "3: Files",  a3 && a3->window_id == cur_win_id);
-    gfx_draw_button(326, tb_y + 4, 100, 24, "4: Proc",   a4 && a4->window_id == cur_win_id);
-    gfx_draw_button(432, tb_y + 4, 100, 24, "5: AI Chat", a5 && a5->window_id == cur_win_id);
+    gfx_draw_button(8,   tb_y + 4, 96, 24, "1: Term",   a1 && a1->window_id == cur_win_id);
+    gfx_draw_button(108, tb_y + 4, 96, 24, "2: SysMon", a2 && a2->window_id == cur_win_id);
+    gfx_draw_button(208, tb_y + 4, 96, 24, "3: Files",  a3 && a3->window_id == cur_win_id);
+    gfx_draw_button(308, tb_y + 4, 96, 24, "4: Proc",   a4 && a4->window_id == cur_win_id);
+    gfx_draw_button(408, tb_y + 4, 96, 24, "5: AI Chat", a5 && a5->window_id == cur_win_id);
+    gfx_draw_button(508, tb_y + 4, 96, 24, "6: Sett",   a6 && a6->window_id == cur_win_id);
 
-    /* Theme / Settings switcher button */
-    gfx_draw_button(538, tb_y + 4, 100, 24, "6: Theme",  0);
+    /* Theme switcher button */
+    gfx_draw_button(608, tb_y + 4, 96, 24, "7: Theme",  0);
 
     /* Exit button */
     gfx_draw_button(screen_w - 110, tb_y + 4, 102, 24, "ESC: Shell", 0);
@@ -856,7 +1206,10 @@ void desktop_render(void)
     /* 4. Render Bottom Taskbar */
     render_taskbar(fb->width, fb->height);
 
-    /* 5. Render Hardware Mouse Cursor */
+    /* 5. Render Notifications Area (Toast popups in top-right) */
+    desktop_render_notifications(fb->width, fb->height);
+
+    /* 6. Render Hardware Mouse Cursor */
     const mouse_state_t *m = mouse_get_state();
     if (m && m->is_present) {
         mouse_draw_cursor(FB_COLOR_WHITE);
@@ -934,14 +1287,34 @@ void desktop_run(void)
                 desktop_handle_key(ev.key);
                 needs_render = 1;
             } else if (ev.type == EVENT_MOUSE_DOWN) {
+                /* Check Toast Notification Click (Dismissal) */
+                if (ev.x >= (int32_t)fb->width - 330 && ev.x < (int32_t)fb->width - 10 &&
+                    ev.y >= (int32_t)WM_TOP_BAR_HEIGHT + 6 && ev.y < (int32_t)WM_TOP_BAR_HEIGHT + 6 + 186) {
+                    uint32_t toast_idx = (ev.y - (WM_TOP_BAR_HEIGHT + 6)) / 62;
+                    const notif_queue_t *q = notif_get_queue();
+                    int cur = 0;
+                    for (int i = NOTIF_MAX_ENTRIES - 1; i >= 0; i--) {
+                        if (q->items[i].is_active) {
+                            if ((uint32_t)cur == toast_idx) {
+                                notif_dismiss(q->items[i].id);
+                                needs_render = 1;
+                                break;
+                            }
+                            cur++;
+                        }
+                    }
+                    if (needs_render) continue;
+                }
+
                 /* Check taskbar */
                 if (ev.y >= (int32_t)fb->height - (int32_t)WM_TASKBAR_HEIGHT) {
-                    if (ev.x >= 8 && ev.x < 108) app_launch(APP_ID_TERMINAL);
-                    else if (ev.x >= 114 && ev.x < 214) app_launch(APP_ID_SYSMON);
-                    else if (ev.x >= 220 && ev.x < 320) app_launch(APP_ID_FILES);
-                    else if (ev.x >= 326 && ev.x < 426) app_launch(APP_ID_PROC);
-                    else if (ev.x >= 432 && ev.x < 532) app_launch(APP_ID_AI);
-                    else if (ev.x >= 538 && ev.x < 638) desktop_cycle_theme();
+                    if (ev.x >= 8 && ev.x < 104) app_launch(APP_ID_TERMINAL);
+                    else if (ev.x >= 108 && ev.x < 204) app_launch(APP_ID_SYSMON);
+                    else if (ev.x >= 208 && ev.x < 304) app_launch(APP_ID_FILES);
+                    else if (ev.x >= 308 && ev.x < 404) app_launch(APP_ID_PROC);
+                    else if (ev.x >= 408 && ev.x < 504) app_launch(APP_ID_AI);
+                    else if (ev.x >= 508 && ev.x < 604) app_launch(APP_ID_SETTINGS);
+                    else if (ev.x >= 608 && ev.x < 704) desktop_cycle_theme();
                     else if (ev.x >= (int32_t)fb->width - 110) g_desk.is_running = 0;
                     needs_render = 1;
                 } else {
@@ -990,7 +1363,9 @@ void desktop_run(void)
             }
         }
 
-        /* Periodic desktop refresh (every 20 ticks / 200ms) for clock & gauges */
+        /* Periodic notification expiry and desktop refresh */
+        notif_update((uint32_t)timer_ticks);
+
         if ((uint32_t)timer_ticks - last_rendered_tick >= 20) {
             needs_render = 1;
             last_rendered_tick = (uint32_t)timer_ticks;
@@ -1016,7 +1391,7 @@ int test_desktop_invariants(void)
 {
     desktop_init();
     if (g_desk.is_running != 1) return -1;
-    if (app_get_registered_count() < 5) return -2;
+    if (app_get_registered_count() < 6) return -2;
 
     /* Verify focus cycling */
     window_t *f1 = wm_get_focused();
@@ -1090,6 +1465,27 @@ int test_desktop_invariants(void)
     /* Verify backend status setting */
     desktop_ai_set_backend_status("MOCK_ACTIVE", "Mock-v1", 1);
     if (g_desk.ai_is_connected != 1) return -14;
+
+    /* Verify Settings application launch, tab switching, and action cycling */
+    app_launch(APP_ID_SETTINGS);
+    desktop_settings_set_tab(1);
+    if (g_desk.settings_active_tab != 1) return -15;
+
+    desktop_settings_cycle_accent();
+    desktop_settings_cycle_mouse_sensitivity();
+    if (g_desk.config.mouse_sensitivity < 1 || g_desk.config.mouse_sensitivity > 3) return -16;
+
+    desktop_settings_cycle_ai_backend();
+    int save_ok = desktop_save_settings();
+    if (save_ok != 0) return -17;
+
+    /* Verify notification subsystem within desktop environment */
+    uint32_t prev_notifs = notif_get_active_count();
+    int test_nid = notif_post(NOTIF_LEVEL_INFO, "Test", "Testing desktop toasts", 300);
+    if (test_nid <= 0 || notif_get_active_count() != prev_notifs + 1) return -18;
+
+    notif_dismiss(test_nid);
+    if (notif_get_active_count() != prev_notifs) return -19;
 
     /* ESC exits */
     desktop_handle_key(27);

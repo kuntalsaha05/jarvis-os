@@ -30,7 +30,8 @@ typedef enum {
     APP_ID_FILES    = 3,
     APP_ID_PROC     = 4,
     APP_ID_AI       = 5,
-    APP_ID_CUSTOM   = 6
+    APP_ID_SETTINGS = 6,
+    APP_ID_CUSTOM   = 7
 } app_id_t;
 
 typedef struct {

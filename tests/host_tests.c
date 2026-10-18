@@ -27,6 +27,7 @@
 #include "gui/wm.h"
 #include "gui/desktop.h"
 #include "gui/config.h"
+#include "gui/notification.h"
 #include "gui/app.h"
 
 /* Provide stubs for terminal functions when running in host unit test mode */
@@ -701,6 +702,10 @@ static void test_gui_and_framebuffer_invariants(void)
     /* 7. Application framework registration, lifecycle states, duplicate ID rejection, and shutdown */
     int app_res = test_app_framework_invariants();
     assert(app_res == 0);
+
+    /* 8. Notification Subsystem: queue capacity, levels, overflow eviction, expiry, dismissal */
+    int notif_res = test_notification_invariants();
+    assert(notif_res == 0);
 
     printf("PASS\n");
 }
