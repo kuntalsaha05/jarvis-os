@@ -5,11 +5,14 @@
 #include <stddef.h>
 #include "wm.h"
 #include "event.h"
+#include "app.h"
+#include "config.h"
 
 typedef struct {
     int is_running;
     uint32_t bg_color;
     uint32_t tick_counter;
+    desktop_config_t config;
 
     /* Terminal Application State */
     char term_history[24][80];
@@ -47,6 +50,10 @@ void desktop_launch_sysmon(void);
 void desktop_launch_files(void);
 void desktop_launch_proc(void);
 void desktop_launch_ai(void);
+
+void desktop_cycle_theme(void);
+int desktop_save_settings(void);
+void desktop_reset_settings(void);
 
 const desktop_env_t *desktop_get_env(void);
 

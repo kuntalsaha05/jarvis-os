@@ -66,11 +66,13 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
    - Enforced 10-second execution deadlines and sub-millisecond audit trails.
    - Host CLI with `--interactive`, `--explain <concept>`, `--fs-diagnostics`, `--status`, and `--audit`.
 
-6. **Native Graphical Desktop & Window Manager (Phases 10 & 11)**:
+6. **Native Graphical Desktop, Window Manager & Application Framework (Phases 10, 11 & 12)**:
    - High-resolution VBE/Bochs BGA $1024 \times 768 \times 32\text{ bpp}$ linear framebuffer auto-discovery (`0xFD000000`).
    - True Window Manager (`kernel/gui/wm.c` / `wm.h`) supporting window creation, destruction, z-order promotion, title bars, and boundary clipping.
    - Interactive window controls: Minimize (`_`), Maximize (`[]`), Close (`X`), and mouse dragging.
    - Decoupled GUI Event Queue (`kernel/gui/event.c` / `event.h`) processing mouse and keyboard events outside interrupt context.
+   - Reusable GUI Application Framework (`kernel/gui/app.c` / `app.h`) with lifecycle states (`REGISTERED`, `RUNNING`, `MINIMIZED`, `STOPPED`), duplicate ID rejection, and clean resource destruction.
+   - Desktop Configuration & Persistence Subsystem (`kernel/gui/config.c` / `config.h`): versioned `desktop.cfg` format with magic header (`0x4A434647`), checksum validation, safe defaults fallback, and 3 desktop themes (JARVIS Dark, Cyberpunk, Classic Slate).
    - 5 Dedicated desktop applications: Graphical Terminal (`jarvis>`), System Monitor (live CPU & memory gauges), File Browser (JARVIS-FS RAMDisk explorer), Process & Scheduler Monitor, and JARVIS AI Companion.
    - Dual-channel PS/2 mouse driver with packet decoding and hardware arrow cursor.
    - Zero-regression console fallback: `ESC` returns cleanly to text console shell.
@@ -185,6 +187,8 @@ Detailed technical architecture, reports, and design docs are available in `docs
 - [`docs/PRESENTATION_OUTLINE.md`](docs/PRESENTATION_OUTLINE.md): Engineering defense and presentation slide outline with anticipated Q&A.
 
 ### Phase Verification Reports
+- [`docs/PHASE12_APP_FRAMEWORK.md`](docs/PHASE12_APP_FRAMEWORK.md): Phase 12 application framework, desktop configuration, themes, and persistence report.
+- [`docs/PHASE11_GUI_VERIFICATION.md`](docs/PHASE11_GUI_VERIFICATION.md): Phase 11 window manager, event queue, dragging, and desktop application suite report.
 - [`docs/PHASE10_GUI.md`](docs/PHASE10_GUI.md): Phase 10 native graphical desktop specification, visual tests, and architecture report.
 - [`docs/FEATURE_TRACEABILITY.md`](docs/FEATURE_TRACEABILITY.md): 54-point complete feature requirement traceability matrix.
 - [`docs/SETUP_AND_BUILD.md`](docs/SETUP_AND_BUILD.md): Step-by-step setup, toolchain requirements, build, and run guide.

@@ -25,6 +25,8 @@
 #include "gui/event.h"
 #include "gui/wm.h"
 #include "gui/desktop.h"
+#include "gui/config.h"
+#include "gui/app.h"
 
 /* Provide stubs for terminal functions when running in host unit test mode */
 void terminal_write(const char *str) {
@@ -669,7 +671,7 @@ static void test_file_alloc_and_disk_sched_invariants_host(void)
 
 static void test_gui_and_framebuffer_invariants(void)
 {
-    printf("[TEST] Framebuffer, Event Queue & Window Manager Invariants... ");
+    printf("[TEST] Framebuffer, Event Queue, Window Manager, Config & App Framework Invariants... ");
 
     /* 1. Framebuffer bounds and clipping invariants */
     int fb_res = test_framebuffer_invariants();
@@ -690,6 +692,14 @@ static void test_gui_and_framebuffer_invariants(void)
     /* 5. Desktop environment, applications launching, and key routing */
     int desk_res = test_desktop_invariants();
     assert(desk_res == 0);
+
+    /* 6. Desktop configuration serialization, defaults, validation, and checksum recovery */
+    int cfg_res = test_config_invariants();
+    assert(cfg_res == 0);
+
+    /* 7. Application framework registration, lifecycle states, duplicate ID rejection, and shutdown */
+    int app_res = test_app_framework_invariants();
+    assert(app_res == 0);
 
     printf("PASS\n");
 }

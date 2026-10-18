@@ -47,6 +47,8 @@ OBJECTS = \
 	build/graphics.o \
 	build/event.o \
 	build/wm.o \
+	build/config.o \
+	build/app.o \
 	build/desktop.o
 
 .PHONY: all clean iso run run-headless test test-ai test-all
@@ -164,6 +166,12 @@ build/event.o: kernel/gui/event.c | build
 build/wm.o: kernel/gui/wm.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
+build/config.o: kernel/gui/config.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/app.o: kernel/gui/app.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
 build/desktop.o: kernel/gui/desktop.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
@@ -186,7 +194,7 @@ run-headless: $(ISO)
 
 test:
 	mkdir -p build
-	gcc -O2 -Wall -Wextra -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/event.c kernel/gui/wm.c kernel/gui/desktop.c -o build/host_tests
+	gcc -O2 -Wall -Wextra -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/event.c kernel/gui/wm.c kernel/gui/config.c kernel/gui/app.c kernel/gui/desktop.c -o build/host_tests
 	./build/host_tests
 
 
