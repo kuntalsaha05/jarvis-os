@@ -165,6 +165,7 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 Detailed technical architecture, reports, and design docs are available in `docs/`:
 
 ### Final Project Reports & Submission Deliverables
+- [`docs/FINAL_ACCEPTANCE_REPORT.md`](docs/FINAL_ACCEPTANCE_REPORT.md): Phase 9 independent correctness audit, test reproduction, and final acceptance verdict.
 - [`docs/FINAL_PROJECT_REPORT.md`](docs/FINAL_PROJECT_REPORT.md): Comprehensive final project technical report covering all 14 project sections (Abstract through References).
 - [`docs/FINAL_VERIFICATION.md`](docs/FINAL_VERIFICATION.md): Phase 8 final release verification evidence package, test logs, and capability matrix.
 - [`docs/ARCHITECTURE_DIAGRAMS.md`](docs/ARCHITECTURE_DIAGRAMS.md): Full set of editable Mermaid diagrams covering kernel, memory, scheduling, filesystem, and AI architecture.
