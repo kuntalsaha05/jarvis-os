@@ -83,3 +83,4 @@ In accordance with JARVIS-OS's educational mission, the following conscious boun
    - Deep learning inference (AirLLM, llama.cpp) executes on the host workstation communicating over serial line or CLI bridge.
    - The bare-metal kernel does not include floating-point AVX/CUDA runtimes.
    - Data provenance is always truthfully stamped: `LIVE_KERNEL` for serial guest telemetry, `OFFLINE_SIMULATION` for host-side unit test telemetry.
+

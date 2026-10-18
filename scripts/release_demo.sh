@@ -55,3 +55,4 @@ echo "  - Headless Serial Shell:     make run-headless"
 echo "To interact with the AI assistant:"
 echo "  - Interactive AI REPL:       python3 jarvis/main.py --interactive"
 echo "=================================================="
+

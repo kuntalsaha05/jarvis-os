@@ -108,7 +108,13 @@ make test-release
 # Run all test suites
 make test-all
 
-# Run complete reproducible demo script
+# Run unified end-to-end demo script (Phase 8 verification & boot)
+./scripts/demo.sh
+
+# Run interactive QEMU shell demo via script
+./scripts/demo.sh --interactive
+
+# Run release demonstration script
 ./scripts/release_demo.sh
 ```
 
@@ -156,7 +162,15 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 
 ## Documentation
 
-Detailed technical architecture and design docs are available in `docs/`:
+Detailed technical architecture, reports, and design docs are available in `docs/`:
+
+### Final Project Reports & Submission Deliverables
+- [`docs/FINAL_PROJECT_REPORT.md`](docs/FINAL_PROJECT_REPORT.md): Comprehensive final project technical report covering all 14 project sections (Abstract through References).
+- [`docs/FINAL_VERIFICATION.md`](docs/FINAL_VERIFICATION.md): Phase 8 final release verification evidence package, test logs, and capability matrix.
+- [`docs/ARCHITECTURE_DIAGRAMS.md`](docs/ARCHITECTURE_DIAGRAMS.md): Full set of editable Mermaid diagrams covering kernel, memory, scheduling, filesystem, and AI architecture.
+- [`docs/PRESENTATION_OUTLINE.md`](docs/PRESENTATION_OUTLINE.md): Engineering defense and presentation slide outline with anticipated Q&A.
+
+### Phase Verification Reports
 - [`docs/FEATURE_TRACEABILITY.md`](docs/FEATURE_TRACEABILITY.md): 54-point complete feature requirement traceability matrix.
 - [`docs/SETUP_AND_BUILD.md`](docs/SETUP_AND_BUILD.md): Step-by-step setup, toolchain requirements, build, and run guide.
 - [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md): Pre-release checklist, security audit findings, and remaining boundaries.
@@ -166,6 +180,8 @@ Detailed technical architecture and design docs are available in `docs/`:
 - [`docs/PHASE4_VERIFICATION.md`](docs/PHASE4_VERIFICATION.md): Phase 4 IPC, synchronization, and deadlocks verification report.
 - [`docs/PHASE3_VERIFICATION.md`](docs/PHASE3_VERIFICATION.md): Phase 3 process, context-switch, and memory correctness report.
 - [`docs/PHASE2_VERIFICATION.md`](docs/PHASE2_VERIFICATION.md): Phase 2 hardware, interrupt, and IRQ1 verification report.
+
+### Deep Dives & Specifications
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): Comprehensive system architecture and interrupt flow.
 - [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md): Implementation status tracker with verified evidence.
 - [`docs/BUILD_AND_RUN.md`](docs/BUILD_AND_RUN.md): Build targets, toolchains, and QEMU options.
