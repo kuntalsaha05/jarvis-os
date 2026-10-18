@@ -42,7 +42,7 @@ OBJECTS = \
 	build/keyboard.o \
 	build/shell.o
 
-.PHONY: all clean iso run run-headless test test-ai test-all
+.PHONY: all clean iso run run-headless test test-ai test-all gui
 
 all: $(KERNEL)
 
@@ -168,6 +168,9 @@ test-qemu: $(ISO)
 	python3 scripts/qemu_smoke_test.py
 
 test-all: test test-ai test-qemu
+
+gui:
+	python jarvis_gui.py
 
 clean:
 	rm -rf build

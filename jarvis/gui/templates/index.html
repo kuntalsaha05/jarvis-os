@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>J.A.R.V.I.S. — Voice Assistant &amp; Operating System Interface</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- ========================================================
+       TOP HEADER — Brand & Status Beads
+       ======================================================== -->
+  <header class="jarvis-top-header">
+    <div class="top-left-brand">
+      <div class="brand-heading">J . A . R . V . I . S .</div>
+      <div class="brand-subtitle">JUST A RATHER VERY INTELLIGENT SYSTEM</div>
+    </div>
+
+    <!-- Center Status Beads matching reference screenshot -->
+    <div class="top-status-beads">
+      <div class="bead-item active"><span class="bead-dot"></span> CORE</div>
+      <div class="bead-item active"><span class="bead-dot"></span> WORKING</div>
+      <div class="bead-item active"><span class="bead-dot"></span> LINK</div>
+      <div class="bead-item active"><span class="bead-dot"></span> ONLINE</div>
+      <div class="bead-item active"><span class="bead-dot"></span> RUNNER</div>
+      <div class="bead-item active"><span class="bead-dot"></span> ALIVE</div>
+    </div>
+
+    <!-- Top Right Real-Time Digital Clock -->
+    <div class="top-clock-section">
+      <div class="digital-clock" id="digital-clock-display">19:26:31</div>
+      <button class="voice-btn" id="sound-toggle-btn" style="padding:2px 8px; font-size:10px;" onclick="toggleSound()">
+        SFX: ON
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================================================
+       3-COLUMN COMMAND DASHBOARD
+       ======================================================== -->
+  <div class="jarvis-grid-layout">
+
+    <!-- ----------------------------------------------------
+         LEFT SIDEBAR — System Vitality & Activity Log
+         ---------------------------------------------------- -->
+    <aside class="sidebar-left">
+      
+      <!-- System Vitals / Vitality -->
+      <div class="tactical-card">
+        <div class="card-title-row">
+          <span>SYSTEM VITALS (System Vitality)</span>
+          <span class="card-badge">LIVE - 4</span>
+        </div>
+
+        <div class="vital-row">
+          <div class="vital-title">
+            <span>SUBSCRIBED</span>
+            <span style="color:var(--text-muted);">+ 2 / 24HR</span>
+          </div>
+          <div class="vital-big-num" id="vital-subscribed-num">227</div>
+          <div class="vital-meter">
+            <div class="vital-bar-fill" style="width: 65%;"></div>
+          </div>
+        </div>
+
+        <div class="vital-row">
+          <div class="vital-title">
+            <span>CONTEXT SWITCHES</span>
+            <span style="color:var(--text-muted);">PREEMPT: 18</span>
+          </div>
+          <div class="vital-big-num" id="vital-ctx-num">111</div>
+          <div class="vital-meter">
+            <div class="vital-bar-fill" id="vital-ctx-bar" style="width: 42%;"></div>
+          </div>
+        </div>
+
+        <div class="vital-row" style="margin-bottom:0;">
+          <div class="vital-title">
+            <span>TIMER TICKS</span>
+            <span style="color:var(--text-muted);">100 HZ PIT</span>
+          </div>
+          <div class="vital-big-num" id="vital-ticks-num">323</div>
+          <div class="vital-meter">
+            <div class="vital-bar-fill" id="vital-ticks-bar" style="width: 78%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LLM Backend Switcher -->
+      <div class="tactical-card" style="padding:6px 10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted);">INFERENCE:</span>
+          <select id="llm-backend-select" class="prompt-input" style="padding:2px 6px; font-size:10px; width:130px;" onchange="switchBackend()">
+            <option value="mock">MOCK (OFFLINE)</option>
+            <option value="llama">LLAMA.CPP (GGUF)</option>
+            <option value="airllm">AIRLLM (70B)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Mission Links -->
+      <div class="tactical-card">
+        <div class="card-title-row">
+          <span>MISSION LINKS</span>
+        </div>
+        <div class="mission-link-item" onclick="openStudioModal('algo-modal')">
+          <span>⦿ Memory Galaxy</span>
+          <span class="tag">48/64 FRAMES</span>
+        </div>
+        <div class="mission-link-item" onclick="openStudioModal('algo-modal')">
+          <span>⦿ Agents &amp; PCB Table</span>
+          <span class="tag">4 ACTIVE</span>
+        </div>
+        <div class="mission-link-item" onclick="openStudioModal('storage-modal')">
+          <span>⦿ Vault &amp; JARVIS-FS</span>
+          <span class="tag">128 BLOCKS</span>
+        </div>
+        <div class="mission-link-item" onclick="openStudioModal('term-modal')" style="border-bottom:none;">
+          <span>⦿ Kernel Shell Terminal</span>
+          <span class="tag">COM1 READY</span>
+        </div>
+      </div>
+
+      <!-- Live Activity Log matching screenshot -->
+      <div class="tactical-card" style="flex:1; display:flex; flex-direction:column;">
+        <div class="card-title-row">
+          <span>LIVE ACTIVITY</span>
+          <span style="font-size:9px; color:var(--text-muted); cursor:pointer;" onclick="clearActivityFeed()">CLEAR</span>
+        </div>
+        <div class="activity-feed" id="activity-feed-list">
+          <div class="feed-item"><span class="feed-bullet">•</span><span class="feed-text">Vault metadata synchronized</span></div>
+          <div class="feed-item"><span class="feed-bullet green">•</span><span class="feed-text">Speak 320ms</span></div>
+          <div class="feed-item"><span class="feed-bullet">•</span><span class="feed-text">Store turn: session_01</span></div>
+          <div class="feed-item"><span class="feed-bullet green">•</span><span class="feed-text">Think 180ms</span></div>
+          <div class="feed-item"><span class="feed-bullet">•</span><span class="feed-text">Resolve memory: [Mem: 0, Event: 0]</span></div>
+          <div class="feed-item"><span class="feed-bullet green">•</span><span class="feed-text">Speak 281ms</span></div>
+          <div class="feed-item"><span class="feed-bullet">•</span><span class="feed-text">Store turn: ack_received</span></div>
+          <div class="feed-item"><span class="feed-bullet green">•</span><span class="feed-text">Think 160ms</span></div>
+        </div>
+      </div>
+
+      <!-- Documents / Files matching screenshot -->
+      <div class="tactical-card">
+        <div class="card-title-row">
+          <span>DOCUMENTS</span>
+          <span class="card-badge">5 FILES</span>
+        </div>
+        <div class="doc-item" onclick="viewModalDoc('kernel.cfg')">
+          <span>Week Review</span><span class="doc-size">1.2 KB</span>
+        </div>
+        <div class="doc-item" onclick="viewModalDoc('ai_agent.log')">
+          <span>Plan Today</span><span class="doc-size">34 KB</span>
+        </div>
+        <div class="doc-item" onclick="viewModalDoc('kernel.cfg')">
+          <span>Inbox Brief</span><span class="doc-size">19 KB</span>
+        </div>
+        <div class="doc-item" onclick="viewModalDoc('ai_agent.log')">
+          <span>AM Report</span><span class="doc-size">412 KB</span>
+        </div>
+        <div class="doc-item" onclick="viewModalDoc('kernel.cfg')" style="border-bottom:none;">
+          <span>Trend Scan</span><span class="doc-size">68 KB</span>
+        </div>
+      </div>
+
+    </aside>
+
+
+    <!-- ----------------------------------------------------
+         CENTER COLUMN — Voice Intelligence Visualizer Stage
+         ---------------------------------------------------- -->
+    <main class="center-voice-stage">
+
+      <!-- Center Top Nav -->
+      <div class="center-nav-bar">
+        <div class="nav-buttons">
+          <button class="nav-btn active">VOICE INTERFACE</button>
+          <button class="nav-btn" onclick="openStudioModal('algo-modal')">ALGORITHM LAB</button>
+          <button class="nav-btn" onclick="openStudioModal('storage-modal')">RAM DISK FS</button>
+          <button class="nav-btn" onclick="openStudioModal('term-modal')">KERNEL SHELL</button>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted);">
+          STATUS: <strong style="color:var(--gold-primary);" id="center-status-badge">STANDBY</strong>
+        </div>
+      </div>
+
+      <!-- Main Canvas Stage for Responsive Voice Visualizer -->
+      <div class="voice-canvas-wrapper">
+        <canvas id="jarvis-voice-canvas"></canvas>
+
+        <!-- Floating Tactical Assistant Transcript Readout -->
+        <div class="voice-transcript-card" id="voice-transcript-card">
+          <div class="transcript-header">
+            <span>// J.A.R.V.I.S. VOICE TRANSCRIPT</span>
+            <button class="voice-btn" style="padding:1px 6px;" onclick="closeTranscriptCard()">✕ DISMISS</button>
+          </div>
+          <div class="transcript-body" id="transcript-body-text"></div>
+          <div class="tool-telemetry-tag" id="transcript-tool-tag" style="display:none;">
+            <span id="transcript-tool-name">TOOL: None</span>
+            <span>VERIFIED SECURE</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Bottom Command Dock -->
+      <div class="center-command-dock">
+        <div class="prompt-bar-row">
+          <span class="prompt-lead">&gt; COMM PROTOCOL //</span>
+          <input 
+            type="text" 
+            id="voice-command-input" 
+            class="prompt-input" 
+            placeholder="Speak or enter prompt / kernel command (e.g. status, sched, banker)..."
+            autocomplete="off" 
+            spellcheck="false"
+          >
+          <button class="btn-mic-toggle" id="btn-mic-voice" onclick="toggleVoiceInput()">
+            <span>🎙</span> VOICE INPUT
+          </button>
+          <button class="btn-transmit" onclick="submitVoiceCommand()">
+            TRANSMIT
+          </button>
+        </div>
+
+        <!-- Quick Prompts Bar matching reference commands -->
+        <div class="quick-prompts-bar">
+          <button class="quick-chip" onclick="sendVoicePrompt('What is the current kernel status?')">STATUS SCAN</button>
+          <button class="quick-chip" onclick="sendVoicePrompt('Show me the memory usage and free pages.')">FREE MEMORY</button>
+          <button class="quick-chip" onclick="sendVoicePrompt('Run the Banker algorithm deadlock check.')">BANKER SAFETY</button>
+          <button class="quick-chip" onclick="runDirectBelady()">BELADY'S ANOMALY</button>
+          <button class="quick-chip" onclick="sendVoicePrompt('sched')">CPU SCHEDULER</button>
+          <button class="quick-chip" onclick="sendVoicePrompt('disk')">DISK HEAD SEEK</button>
+          <button class="quick-chip" onclick="sendVoicePrompt('List files stored on the filesystem.')">LIST FILES</button>
+        </div>
+      </div>
+
+    </main>
+
+
+    <!-- ----------------------------------------------------
+         RIGHT SIDEBAR — Command Deck & Voice Control
+         ---------------------------------------------------- -->
+    <aside class="sidebar-right">
+
+      <!-- Command Deck Grid matching reference screenshot -->
+      <div class="tactical-card">
+        <div class="card-title-row">
+          <span>COMMAND DECK</span>
+          <span class="card-badge">1 ACTIVE</span>
+        </div>
+        <div class="command-deck-grid">
+          <button class="deck-btn" onclick="sendVoicePrompt('Show inbox brief and pending events.')">+ INBOX BRIEF</button>
+          <button class="deck-btn" onclick="sendVoicePrompt('status')">+ METRIC PULL</button>
+          <button class="deck-btn" onclick="openStudioModal('algo-modal')">+ RESEARCH</button>
+          <button class="deck-btn" onclick="sendVoicePrompt('Show system AM report.')">+ AM REPORT</button>
+          <button class="deck-btn" onclick="sendVoicePrompt('disk')">+ TREND SCAN</button>
+          <button class="deck-btn" onclick="runDirectBelady()">+ BACKTESTING</button>
+          <button class="deck-btn highlight" onclick="sendVoicePrompt('Show todays execution plan.')">+ PLAN TODAY</button>
+          <button class="deck-btn highlight" onclick="sendVoicePrompt('sched')">+ CPU SCHED</button>
+          <button class="deck-btn" onclick="sendVoicePrompt('banker')">+ BANKER</button>
+          <button class="deck-btn" onclick="spawnTaskPrompt()">+ NEW MISSION</button>
+        </div>
+      </div>
+
+      <!-- JARVIS Voice Panel matching reference screenshot -->
+      <div class="voice-mini-panel">
+        <div class="voice-status-line">
+          <span>JARVIS VOICE</span>
+          <span id="voice-mini-status" style="color:var(--gold-primary); font-weight:700;">● STANDBY</span>
+        </div>
+        <canvas class="voice-waveform-mini" id="voice-waveform-mini"></canvas>
+        <div class="voice-control-buttons">
+          <button class="voice-btn danger" onclick="stopSpeechOutput()">🛑 END</button>
+          <button class="voice-btn" onclick="pauseSpeechOutput()">⏸ PAUSE</button>
+        </div>
+      </div>
+
+      <!-- 64-Bit CPU Context Registers -->
+      <div class="tactical-card">
+        <div class="card-title-row">
+          <span>CPU REGISTERS</span>
+          <span style="font-size:9px; color:var(--text-muted);">x86-64</span>
+        </div>
+        <table class="register-spec-table">
+          <tbody>
+            <tr><td class="reg-key">CR0 (PAGING/WP)</td><td class="reg-val">0x80010033</td></tr>
+            <tr><td class="reg-key">CR3 (PML4 BASE)</td><td class="reg-val">0x00100000</td></tr>
+            <tr><td class="reg-key">CR4 (PAE/PGE)</td><td class="reg-val">0x000006F0</td></tr>
+            <tr><td class="reg-key">RSP (STACK)</td><td class="reg-val">0xFFFF800000107FD8</td></tr>
+            <tr><td class="reg-key">RFLAGS</td><td class="reg-val">0x00000202</td></tr>
+            <tr><td class="reg-key">GDT CS / SS</td><td class="reg-val">0x08 / 0x10</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Bottom System Status Line matching reference -->
+      <div class="tactical-card" style="margin-top:auto; font-family:var(--font-mono); font-size:9.5px; color:var(--text-muted); line-height:1.4;">
+        SYS: <strong style="color:var(--green-healthy);">Accurate</strong> | Multiboot 0.6.96<br>
+        Host: <span style="color:var(--gold-primary);">LLM Bridge</span> | 100 Hz PIT Timer
+      </div>
+
+    </aside>
+
+  </div>
+
+
+  <!-- ========================================================
+       EXPANDED MODAL WORKSPACES (ALGO STUDIO, RAM DISK, SHELL)
+       ======================================================== -->
+
+  <!-- Modal: Algorithm Studio -->
+  <div class="tactical-modal-overlay" id="algo-modal">
+    <div class="tactical-modal-window">
+      <button class="btn-modal-close" onclick="closeStudioModal('algo-modal')">✕ CLOSE</button>
+      <div class="card-title-row" style="font-size:13px; margin-bottom:12px;">
+        <span>OS ALGORITHM VISUALIZATION STUDIO</span>
+      </div>
+
+      <div style="display:flex; gap:6px; margin-bottom:14px; border-bottom:1px solid var(--border-olive); padding-bottom:6px; flex-wrap:wrap;">
+        <button class="quick-chip" onclick="showModalAlgo('m-cpu')">CPU SCHEDULING (GANTT)</button>
+        <button class="quick-chip" onclick="showModalAlgo('m-page')">PAGE REPLACEMENT</button>
+        <button class="quick-chip" onclick="showModalAlgo('m-banker')">BANKER'S DEADLOCK</button>
+        <button class="quick-chip" onclick="showModalAlgo('m-mem')">MEMORY ALLOC FIT</button>
+        <button class="quick-chip" onclick="showModalAlgo('m-disk')">DISK HEAD SCHED</button>
+      </div>
+
+      <!-- M-CPU -->
+      <div id="pane-m-cpu" class="modal-algo-pane">
+        <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+          <select id="m-cpu-algo" class="prompt-input" style="width:160px;">
+            <option value="fcfs">FCFS</option>
+            <option value="sjf">SJF (Non-preemptive)</option>
+            <option value="rr" selected>Round Robin</option>
+          </select>
+          <input type="number" id="m-cpu-quantum" class="prompt-input" value="3" style="width:60px;" min="1" max="10">
+          <button class="btn-transmit" onclick="runModalCPUSched()">RUN SIMULATION</button>
+        </div>
+        <div class="modal-gantt-strip" id="m-gantt-strip"></div>
+        <div id="m-cpu-summary" style="font-family:var(--font-mono); font-size:11px; margin-top:8px;"></div>
+      </div>
+
+      <!-- M-Page -->
+      <div id="pane-m-page" class="modal-algo-pane" style="display:none;">
+        <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+          <select id="m-page-algo" class="prompt-input" style="width:130px;">
+            <option value="fifo">FIFO</option>
+            <option value="lru">LRU</option>
+            <option value="optimal">OPTIMAL</option>
+          </select>
+          <input type="number" id="m-page-frames" class="prompt-input" value="3" style="width:60px;" min="1" max="8">
+          <input type="text" id="m-page-refs" class="prompt-input" value="7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2, 1, 2, 0, 1, 7, 0, 1" style="flex:1;">
+          <button class="btn-transmit" onclick="runModalPageReplace()">SIMULATE</button>
+        </div>
+        <div id="m-page-summary" style="font-family:var(--font-mono); font-size:11px; max-height:240px; overflow-y:auto;"></div>
+      </div>
+
+      <!-- M-Banker -->
+      <div id="pane-m-banker" class="modal-algo-pane" style="display:none;">
+        <button class="btn-transmit" onclick="runModalBanker()">EXECUTE SAFETY CHECK</button>
+        <div id="m-banker-summary" style="font-family:var(--font-mono); font-size:11px; margin-top:10px;"></div>
+      </div>
+
+      <!-- M-Mem -->
+      <div id="pane-m-mem" class="modal-algo-pane" style="display:none;">
+        <button class="btn-transmit" onclick="runModalMemFit()">ALLOCATE PARTITIONS (BEST FIT)</button>
+        <div id="m-mem-bar" style="display:flex; height:40px; border:1px solid var(--border-olive); margin:10px 0;"></div>
+        <div id="m-mem-summary" style="font-family:var(--font-mono); font-size:11px;"></div>
+      </div>
+
+      <!-- M-Disk -->
+      <div id="pane-m-disk" class="modal-algo-pane" style="display:none;">
+        <button class="btn-transmit" onclick="runModalDiskSched()">RUN DISK SEEK (SCAN)</button>
+        <div id="m-disk-summary" style="font-family:var(--font-mono); font-size:11px; margin-top:8px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: RAM Disk Filesystem -->
+  <div class="tactical-modal-overlay" id="storage-modal">
+    <div class="tactical-modal-window">
+      <button class="btn-modal-close" onclick="closeStudioModal('storage-modal')">✕ CLOSE</button>
+      <div class="card-title-row" style="font-size:13px; margin-bottom:10px;">
+        <span>JARVIS-FS RAM DISK BROWSER (64 KiB)</span>
+      </div>
+      <div id="storage-blocks-grid" style="display:grid; grid-template-columns:repeat(16, 1fr); gap:3px; margin-bottom:12px;"></div>
+      <table style="width:100%; border-collapse:collapse; font-family:var(--font-mono); font-size:11px;">
+        <thead>
+          <tr style="color:var(--gold-primary); text-align:left; border-bottom:1px solid var(--border-olive);">
+            <th>Filename</th><th>Size</th><th>Inode</th><th>Blocks</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="storage-files-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal: Kernel Terminal -->
+  <div class="tactical-modal-overlay" id="term-modal">
+    <div class="tactical-modal-window" style="max-width:760px;">
+      <button class="btn-modal-close" onclick="closeStudioModal('term-modal')">✕ CLOSE</button>
+      <div class="card-title-row" style="font-size:13px; margin-bottom:8px;">
+        <span>VIRTUAL KERNEL TERMINAL (COM1 0x3F8)</span>
+      </div>
+      <div id="term-output-box" style="background:#040503; border:1px solid var(--border-olive); padding:10px; height:300px; overflow-y:auto; font-family:var(--font-mono); font-size:11.5px; color:#c8d4b8; white-space:pre-wrap;"></div>
+      <div style="display:flex; gap:6px; margin-top:8px;">
+        <span style="font-family:var(--font-mono); font-size:13px; color:var(--gold-primary); padding-top:6px;">jarvis&gt;</span>
+        <input type="text" id="term-input-field" class="prompt-input" placeholder="Type kernel command (help, status, sched, ls)...">
+        <button class="btn-transmit" onclick="execTermCommand()">EXEC</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/js/voice_visualizer.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

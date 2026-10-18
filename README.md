@@ -78,7 +78,29 @@ make run
 
 # Run headless QEMU session (Serial only)
 make run-headless
+
+# Launch Modern Web Dashboard / Interactive HUD GUI
+python jarvis_gui.py
+# (or double-click run_gui.bat on Windows)
 ```
+
+### Modern Web GUI (Holographic HUD)
+
+JARVIS-OS includes a futuristic Iron Man / Cyberpunk-themed interactive web dashboard with:
+- **Real-Time Kernel Telemetry**: Live PIT timer ticks (100 Hz), context switch counters, preemption quanta, and 64-frame physical page allocator gauges.
+- **AI Companion (JARVIS) Chat**: Natural language assistant communicating over an allowlisted tool bridge (`kernel.query_status`, `memory.get_stats`, etc.) with real-time audit logging and multi-backend support (`mock`, `llama.cpp`, `AirLLM`).
+- **Interactive OS Algorithm Studio**:
+  - *CPU Scheduling*: Interactive task editor, FCFS/SJF/RR simulator, and animated Gantt Chart.
+  - *Page Replacement*: FIFO, LRU, Optimal simulators and one-click **Belady's Anomaly** verification (faults increase from 9 to 10).
+  - *Banker's Deadlock Avoidance*: Allocation/Max matrices, work vector solver, safe sequence generator, and resource request tester.
+  - *Deadlock Detection & Prevention*: Wait-For-Graph cycle finder and Havender's global ordering demonstration.
+  - *Dynamic Memory Fit*: First, Best, and Worst Fit simulations with partition visualization and external fragmentation metrics.
+  - *Disk Head Scheduling*: FCFS, SSTF, SCAN, and C-SCAN trajectory charts.
+  - *Concurrency & Sync*: Circular ring buffer visualizer for Producer-Consumer and Reader-Writer mutexes.
+- **JARVIS-FS RAM Disk Explorer**: 128-block visual sector allocation map, inode directory, and built-in file editor (`kernel.cfg`).
+- **Process & Thread Manager**: Live PCB/TCB table with thread spawning, blocking, unblocking, and termination.
+- **Virtual Kernel Terminal**: Web-based CLI terminal emulator supporting all in-kernel shell commands.
+
 
 ### Testing Commands
 

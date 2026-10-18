@@ -1,0 +1,758 @@
+/* ========================================================
+   J.A.R.V.I.S. — Voice Assistant & OS Interface
+   Cinematic Military-Grade Gold-on-Black Command Dashboard
+   ======================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@600;800;900&display=swap');
+
+:root {
+  /* Exact Colors from Specification */
+  --bg-deep: #070805;
+  --bg-panel: #0B0C08;
+  --bg-panel-trans: rgba(11, 12, 8, 0.92);
+  --bg-card: rgba(16, 17, 12, 0.85);
+  
+  --gold-primary: #E8D84F;
+  --gold-secondary: #B9A83D;
+  --gold-glow: rgba(232, 216, 79, 0.4);
+  --gold-faint: rgba(232, 216, 79, 0.12);
+
+  --text-muted: #858776;
+  --text-main: #D8D6C9;
+  --text-bright: #FFFFFF;
+
+  --green-healthy: #8FBF67;
+  --green-glow: rgba(143, 191, 103, 0.4);
+  --red-alert: #C95B4B;
+
+  --border-gold: rgba(232, 216, 79, 0.22);
+  --border-olive: rgba(133, 135, 118, 0.2);
+  --border-subtle: rgba(255, 255, 255, 0.05);
+
+  --font-display: 'Orbitron', sans-serif;
+  --font-hud: 'Rajdhani', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --shadow-gold: 0 0 16px rgba(232, 216, 79, 0.12);
+  --shadow-gold-lg: 0 0 32px rgba(232, 216, 79, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  font-family: var(--font-hud);
+  font-size: 13.5px;
+  line-height: 1.4;
+  user-select: none;
+}
+
+/* Precision Scrollbars */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(11, 12, 8, 0.8);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--gold-secondary);
+  border-radius: 0;
+}
+
+/* ========================================================
+   TOP HEADER — Brand & Status Beads
+   ======================================================== */
+header.jarvis-top-header {
+  height: 42px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-gold);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  z-index: 100;
+  position: relative;
+}
+
+.top-left-brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-heading {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: var(--gold-primary);
+  text-shadow: 0 0 8px var(--gold-glow);
+}
+
+.brand-subtitle {
+  font-size: 8.5px;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.top-status-beads {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.bead-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.bead-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green-healthy);
+  box-shadow: 0 0 6px var(--green-healthy);
+}
+
+.bead-item.active {
+  color: var(--gold-primary);
+}
+
+.bead-item.active .bead-dot {
+  background: var(--gold-primary);
+  box-shadow: 0 0 6px var(--gold-primary);
+}
+
+.top-clock-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.digital-clock {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--gold-primary);
+  text-shadow: 0 0 8px var(--gold-glow);
+}
+
+/* ========================================================
+   3-COLUMN MAIN LAYOUT
+   ======================================================== */
+.jarvis-grid-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr 320px;
+  height: calc(100vh - 42px);
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* ========================================================
+   COLUMN 1: LEFT SIDEBAR — System Vitality & Activity Log
+   ======================================================== */
+aside.sidebar-left {
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-olive);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding: 12px 10px;
+  gap: 12px;
+}
+
+.tactical-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-olive);
+  padding: 10px;
+  position: relative;
+}
+
+.card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--gold-primary);
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(232, 216, 79, 0.12);
+  padding-bottom: 4px;
+}
+
+.card-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border: 1px solid var(--border-olive);
+  color: var(--green-healthy);
+}
+
+/* System Vitals Metric Rows */
+.vital-row {
+  margin-bottom: 8px;
+}
+
+.vital-title {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.vital-big-num {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1.1;
+  margin-bottom: 3px;
+}
+
+.vital-meter {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(133, 135, 118, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.vital-bar-fill {
+  height: 100%;
+  background: var(--gold-primary);
+  box-shadow: 0 0 6px var(--gold-primary);
+  transition: width 0.4s ease;
+}
+
+/* Mission Links */
+.mission-link-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-main);
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mission-link-item:hover {
+  background: var(--gold-faint);
+  color: var(--gold-primary);
+}
+
+.mission-link-item .tag {
+  font-size: 9px;
+  color: var(--green-healthy);
+}
+
+/* Live Activity Log */
+.activity-feed {
+  max-height: 150px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.feed-item {
+  display: flex;
+  gap: 6px;
+  line-height: 1.3;
+}
+
+.feed-bullet {
+  color: var(--gold-primary);
+  font-weight: 700;
+}
+
+.feed-bullet.green { color: var(--green-healthy); }
+.feed-bullet.red { color: var(--red-alert); }
+
+.feed-text {
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+/* Documents / Stored Files */
+.doc-item {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.doc-item:hover {
+  color: var(--gold-primary);
+}
+
+.doc-size {
+  color: var(--gold-secondary);
+}
+
+
+/* ========================================================
+   COLUMN 2: CENTER — Voice Intelligence Visualizer
+   ======================================================== */
+main.center-voice-stage {
+  background: radial-gradient(circle at 50% 45%, rgba(20, 21, 14, 0.7), transparent 70%);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Center Top Mode Switcher Bar */
+.center-nav-bar {
+  height: 38px;
+  border-bottom: 1px solid var(--border-olive);
+  background: rgba(11, 12, 8, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 20;
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.nav-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.nav-btn:hover {
+  color: var(--gold-primary);
+}
+
+.nav-btn.active {
+  color: var(--gold-primary);
+  border-color: var(--border-gold);
+  background: var(--gold-faint);
+  border-bottom: 2px solid var(--gold-primary);
+}
+
+/* Voice Visualizer Canvas Stage */
+.voice-canvas-wrapper {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+canvas#jarvis-voice-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Transcript & Assistant Response Card */
+.voice-transcript-card {
+  position: absolute;
+  bottom: 80px;
+  width: 85%;
+  max-width: 650px;
+  background: rgba(11, 12, 8, 0.92);
+  border: 1px solid var(--border-gold);
+  box-shadow: var(--shadow-gold-lg);
+  padding: 10px 16px;
+  z-index: 30;
+  display: none;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.voice-transcript-card.active {
+  display: block;
+}
+
+.transcript-header {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--gold-primary);
+  border-bottom: 1px solid rgba(232, 216, 79, 0.15);
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+
+.transcript-body {
+  font-size: 14px;
+  color: var(--text-main);
+  line-height: 1.5;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.tool-telemetry-tag {
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: rgba(143, 191, 103, 0.12);
+  border: 1px solid rgba(143, 191, 103, 0.3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--green-healthy);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Center Bottom Command Dock */
+.center-command-dock {
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border-gold);
+  padding: 10px 18px;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prompt-bar-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.prompt-lead {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold-primary);
+  white-space: nowrap;
+}
+
+.prompt-input {
+  flex: 1;
+  background: rgba(16, 17, 12, 0.9);
+  border: 1px solid var(--border-olive);
+  color: #FFFFFF;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 8px 12px;
+  outline: none;
+  transition: all 0.15s;
+}
+
+.prompt-input:focus {
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 10px rgba(232, 216, 79, 0.25);
+}
+
+.btn-mic-toggle {
+  background: rgba(143, 191, 103, 0.15);
+  border: 1px solid var(--green-healthy);
+  color: var(--green-healthy);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.btn-mic-toggle:hover {
+  background: var(--green-healthy);
+  color: #070805;
+}
+
+.btn-mic-toggle.recording {
+  background: var(--red-alert);
+  border-color: var(--red-alert);
+  color: #FFFFFF;
+  box-shadow: 0 0 12px var(--red-alert);
+  animation: pulse-mic 1.2s infinite;
+}
+
+@keyframes pulse-mic {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.btn-transmit {
+  background: rgba(232, 216, 79, 0.15);
+  border: 1px solid var(--gold-primary);
+  color: var(--gold-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-transmit:hover {
+  background: var(--gold-primary);
+  color: #070805;
+  box-shadow: 0 0 14px var(--gold-primary);
+}
+
+.quick-prompts-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.quick-chip {
+  background: rgba(16, 17, 12, 0.8);
+  border: 1px solid var(--border-olive);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 3px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.quick-chip:hover {
+  border-color: var(--gold-primary);
+  color: var(--gold-primary);
+}
+
+
+/* ========================================================
+   COLUMN 3: RIGHT SIDEBAR — Command Deck & Voice Control
+   ======================================================== */
+aside.sidebar-right {
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-olive);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding: 12px 10px;
+  gap: 12px;
+}
+
+/* Command Deck Grid matching reference */
+.command-deck-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.deck-btn {
+  background: rgba(16, 17, 12, 0.8);
+  border: 1px solid var(--border-olive);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  padding: 7px 6px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+
+.deck-btn:hover {
+  border-color: var(--gold-primary);
+  color: var(--gold-primary);
+  background: var(--gold-faint);
+}
+
+.deck-btn.highlight {
+  border-color: var(--gold-secondary);
+  color: var(--gold-primary);
+}
+
+/* JARVIS Voice Control Panel */
+.voice-mini-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-olive);
+  padding: 10px;
+}
+
+.voice-status-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  margin-bottom: 6px;
+}
+
+.voice-waveform-mini {
+  height: 28px;
+  width: 100%;
+  background: #080906;
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 8px;
+}
+
+.voice-control-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.voice-btn {
+  background: rgba(16, 17, 12, 0.9);
+  border: 1px solid var(--border-olive);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 5px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.voice-btn:hover {
+  border-color: var(--gold-primary);
+  color: var(--gold-primary);
+}
+
+.voice-btn.danger {
+  border-color: rgba(201, 91, 75, 0.4);
+  color: var(--red-alert);
+}
+
+.voice-btn.danger:hover {
+  background: var(--red-alert);
+  color: #FFFFFF;
+}
+
+/* CPU Architecture Register Grid */
+.register-spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}
+
+.register-spec-table td {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.register-spec-table .reg-key {
+  color: var(--text-muted);
+}
+
+.register-spec-table .reg-val {
+  color: var(--gold-primary);
+  text-align: right;
+  font-weight: 600;
+}
+
+
+/* ========================================================
+   MODALS (ALGO LAB, RAM DISK, SHELL)
+   ======================================================== */
+.tactical-modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(5, 6, 4, 0.88);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.tactical-modal-overlay.active {
+  display: flex;
+}
+
+.tactical-modal-window {
+  background: var(--bg-panel);
+  border: 1px solid var(--gold-primary);
+  box-shadow: var(--shadow-gold-lg);
+  width: 90%;
+  max-width: 880px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 18px;
+  position: relative;
+}
+
+.btn-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: 1px solid var(--border-gold);
+  color: var(--gold-primary);
+  font-family: var(--font-mono);
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.btn-modal-close:hover {
+  background: var(--gold-primary);
+  color: #070805;
+}
+
+/* Modal Gantt / Frame Styling */
+.modal-gantt-strip {
+  display: flex;
+  height: 36px;
+  width: 100%;
+  border: 1px solid var(--border-olive);
+  background: #080906;
+  margin: 10px 0;
+}
+
+.modal-gantt-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #070805;
+  border-right: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
