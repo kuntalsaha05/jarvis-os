@@ -239,3 +239,4 @@ OK
 1. **Hardware Host Execution**: The neural network models (Llama and AirLLM) execute host-side due to x86-64 freestanding bare-metal environments lacking floating-point AVX/CUDA runtimes.
 2. **Library Dependencies for Local Models**: Running `LlamaCppBackend` requires `pip install llama-cpp-python` and a compatible `.gguf` weight file. Running `AirLLMBackend` requires `pip install airllm torch` and an NVIDIA GPU with CUDA. In environments without these packages, the system gracefully falls back to offline reporting without crash.
 3. **RAM-Disk Volatility**: The kernel filesystem is RAM-backed and resets upon reboot. Persistent files can be inspected or injected on the host using `scripts/jarvis_fs_tool.py`.
+

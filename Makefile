@@ -168,7 +168,10 @@ test-ai:
 test-qemu: $(ISO)
 	python3 scripts/qemu_smoke_test.py
 
-test-all: test test-ai test-qemu
+test-release: $(ISO)
+	python3 scripts/validate_release_workflow.py
+
+test-all: test test-ai test-qemu test-release
 
 clean:
 	rm -rf build

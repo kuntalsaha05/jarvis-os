@@ -102,8 +102,14 @@ make test-ai
 # Run automated QEMU boot and shell verification
 make test-qemu
 
+# Run 13-step automated release and integration workflow
+make test-release
+
 # Run all test suites
 make test-all
+
+# Run complete reproducible demo script
+./scripts/release_demo.sh
 ```
 
 ---
@@ -151,13 +157,17 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 ## Documentation
 
 Detailed technical architecture and design docs are available in `docs/`:
+- [`docs/FEATURE_TRACEABILITY.md`](docs/FEATURE_TRACEABILITY.md): 54-point complete feature requirement traceability matrix.
+- [`docs/SETUP_AND_BUILD.md`](docs/SETUP_AND_BUILD.md): Step-by-step setup, toolchain requirements, build, and run guide.
+- [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md): Pre-release checklist, security audit findings, and remaining boundaries.
+- [`docs/PHASE7_VERIFICATION.md`](docs/PHASE7_VERIFICATION.md): Phase 7 integration and release validation report.
 - [`docs/PHASE6_VERIFICATION.md`](docs/PHASE6_VERIFICATION.md): Phase 6 AI integration and local intelligence verification report.
 - [`docs/PHASE5_VERIFICATION.md`](docs/PHASE5_VERIFICATION.md): Phase 5 storage and filesystem reliability verification report.
 - [`docs/PHASE4_VERIFICATION.md`](docs/PHASE4_VERIFICATION.md): Phase 4 IPC, synchronization, and deadlocks verification report.
 - [`docs/PHASE3_VERIFICATION.md`](docs/PHASE3_VERIFICATION.md): Phase 3 process, context-switch, and memory correctness report.
 - [`docs/PHASE2_VERIFICATION.md`](docs/PHASE2_VERIFICATION.md): Phase 2 hardware, interrupt, and IRQ1 verification report.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): Comprehensive system architecture and interrupt flow.
-- [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md): 28-point feature status tracker with verified evidence.
+- [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md): Implementation status tracker with verified evidence.
 - [`docs/BUILD_AND_RUN.md`](docs/BUILD_AND_RUN.md): Build targets, toolchains, and QEMU options.
 - [`docs/OS_CONCEPTS.md`](docs/OS_CONCEPTS.md): Academic formulations of scheduling, paging, Banker's algorithm, and disk seek.
 - [`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md): Host companion design, security allowlists, and local LLM backends.

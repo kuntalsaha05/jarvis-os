@@ -91,3 +91,12 @@ If an experimental modification causes a kernel boot regression:
 2. Ensure IDT vectors 0-31 are hooked to `generic_exception_stub` so unexpected CPU exceptions print diagnostics instead of triple-faulting.
 3. Use the serial console or debug port `0xE9` (`make run-headless` or `make test-qemu`) to capture boot diagnostic messages.
 4. Checkpoints and backups are maintained in `backups/pre-repair-20261015/`.
+
+---
+
+## 7. Traceability and Release Artifacts
+
+For a detailed breakdown mapping each requirement to its concrete code implementation, verification test, and limitation analysis, consult:
+- [`docs/FEATURE_TRACEABILITY.md`](FEATURE_TRACEABILITY.md): 54-point requirement traceability matrix.
+- [`docs/RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md): Security audit and pre-release verification checklist.
+- [`docs/PHASE7_VERIFICATION.md`](PHASE7_VERIFICATION.md): Phase 7 integration and release validation report.
