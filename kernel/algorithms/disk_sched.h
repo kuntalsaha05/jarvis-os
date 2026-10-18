@@ -17,6 +17,9 @@ void disk_sched_sstf(uint32_t initial_head, const uint32_t *reqs, uint32_t count
 void disk_sched_scan(uint32_t initial_head, const uint32_t *reqs, uint32_t count, uint32_t disk_size, int direction_up, disk_sched_result_t *res);
 void disk_sched_cscan(uint32_t initial_head, const uint32_t *reqs, uint32_t count, uint32_t disk_size, disk_sched_result_t *res);
 
+/* Invariant verification */
+int test_disk_sched_invariants(void);
+
 /* Educational demonstration */
 void disk_sched_run_demo(void);
 

@@ -47,6 +47,14 @@ int file_alloc_contiguous_lookup(const contiguous_file_t *f, uint32_t logical_bl
 int file_alloc_linked_lookup(const linked_file_t *f, uint32_t logical_block);
 int file_alloc_indexed_lookup(const indexed_file_t *f, uint32_t logical_block);
 
+/* Block deallocation and reuse */
+int file_alloc_free_contiguous(file_alloc_disk_t *disk, contiguous_file_t *f);
+int file_alloc_free_linked(file_alloc_disk_t *disk, linked_file_t *f);
+int file_alloc_free_indexed(file_alloc_disk_t *disk, indexed_file_t *f);
+
+/* Invariant verification */
+int test_file_alloc_invariants(void);
+
 /* Educational demonstration */
 void file_alloc_run_demo(void);
 

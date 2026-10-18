@@ -236,3 +236,103 @@ void file_alloc_run_demo(void)
     terminal_write("Indexed      Fast               Fast O(1)      None           1 Index block\n");
 }
 
+int file_alloc_free_contiguous(file_alloc_disk_t *disk, contiguous_file_t *f)
+{
+    if (!disk || !f || !f->success) return -1;
+    for (uint32_t i = 0; i < f->size_blocks; i++) {
+        uint32_t b = f->start_block + i;
+        if (b < disk->total_blocks && disk->bitmap[b]) {
+            disk->bitmap[b] = 0;
+            disk->free_blocks++;
+        }
+    }
+    f->success = 0;
+    f->size_blocks = 0;
+    return 0;
+}
+
+int file_alloc_free_linked(file_alloc_disk_t *disk, linked_file_t *f)
+{
+    if (!disk || !f || !f->success) return -1;
+    for (uint32_t i = 0; i < f->size_blocks && i < 16; i++) {
+        uint32_t b = f->blocks[i];
+        if (b < disk->total_blocks && disk->bitmap[b]) {
+            disk->bitmap[b] = 0;
+            disk->free_blocks++;
+        }
+    }
+    f->success = 0;
+    f->size_blocks = 0;
+    return 0;
+}
+
+int file_alloc_free_indexed(file_alloc_disk_t *disk, indexed_file_t *f)
+{
+    if (!disk || !f || !f->success) return -1;
+    /* Free index block */
+    if (f->index_block < disk->total_blocks && disk->bitmap[f->index_block]) {
+        disk->bitmap[f->index_block] = 0;
+        disk->free_blocks++;
+    }
+    /* Free data blocks */
+    for (uint32_t i = 0; i < f->size_blocks && i < 16; i++) {
+        uint32_t b = f->blocks[i];
+        if (b < disk->total_blocks && disk->bitmap[b]) {
+            disk->bitmap[b] = 0;
+            disk->free_blocks++;
+        }
+    }
+    f->success = 0;
+    f->size_blocks = 0;
+    return 0;
+}
+
+int test_file_alloc_invariants(void)
+{
+    file_alloc_disk_t disk;
+    file_alloc_disk_init(&disk);
+
+    /* 1. Contiguous allocation, lookup, exhaustion, freeing, and reuse */
+    contiguous_file_t cf1, cf2;
+    if (file_alloc_contiguous(&disk, "cf1", 10, &cf1) != 0) return -1;
+    if (cf1.start_block != 0) return -2;
+    if (file_alloc_contiguous_lookup(&cf1, 5) != 5) return -3;
+    if (file_alloc_contiguous_lookup(&cf1, 10) != -1) return -4; /* Out of bounds */
+
+    /* Fragment disk: allocate cf2 */
+    if (file_alloc_contiguous(&disk, "cf2", 10, &cf2) != 0) return -5;
+    /* Free cf1 */
+    if (file_alloc_free_contiguous(&disk, &cf1) != 0) return -6;
+    if (disk.free_blocks != (FILE_ALLOC_DISK_BLOCKS - 10)) return -7;
+    /* Reuse: allocate 5 blocks in the hole freed by cf1 */
+    contiguous_file_t cf3;
+    if (file_alloc_contiguous(&disk, "cf3", 5, &cf3) != 0) return -8;
+    if (cf3.start_block != 0) return -9; /* Reused block 0! */
+
+    /* 2. Linked allocation, non-contiguous blocks, lookup, freeing, reuse */
+    file_alloc_disk_init(&disk);
+    disk.bitmap[1] = disk.bitmap[3] = 1;
+    disk.free_blocks -= 2;
+
+    linked_file_t lf;
+    if (file_alloc_linked(&disk, "lf", 4, &lf) != 0) return -10;
+    if (lf.blocks[0] != 0 || lf.blocks[1] != 2 || lf.blocks[2] != 4 || lf.blocks[3] != 5) return -11;
+    if (file_alloc_linked_lookup(&lf, 2) != 4) return -12;
+    if (file_alloc_free_linked(&disk, &lf) != 0) return -13;
+    if (disk.free_blocks != (FILE_ALLOC_DISK_BLOCKS - 2)) return -14;
+
+    /* 3. Indexed allocation: 1 index block + N data blocks, lookup, freeing, reuse */
+    file_alloc_disk_init(&disk);
+    indexed_file_t idxf;
+    if (file_alloc_indexed(&disk, "idxf", 4, &idxf) != 0) return -15;
+    if (idxf.index_block != 0) return -16;
+    if (idxf.blocks[0] != 1 || idxf.blocks[3] != 4) return -17;
+    if (disk.free_blocks != (FILE_ALLOC_DISK_BLOCKS - 5)) return -18;
+    if (file_alloc_indexed_lookup(&idxf, 3) != 4) return -19;
+    if (file_alloc_free_indexed(&disk, &idxf) != 0) return -20;
+    if (disk.free_blocks != FILE_ALLOC_DISK_BLOCKS) return -21;
+
+    return 0;
+}
+
+

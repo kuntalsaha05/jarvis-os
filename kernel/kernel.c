@@ -255,6 +255,26 @@ void kernel_main(uint64_t magic, uint64_t mb_info_addr)
         terminal_putchar('\n');
     }
 
+    terminal_write("Block device invariants: ");
+    int bdev_res = test_block_device_invariants();
+    if (bdev_res == 0) {
+        terminal_write("PASS (bounds, buffers, capacity)\n");
+    } else {
+        terminal_write("FAIL, code ");
+        terminal_write_number((uint32_t)(-bdev_res));
+        terminal_putchar('\n');
+    }
+
+    terminal_write("Filesystem invariants: ");
+    int fs_inv_res = test_fs_invariants();
+    if (fs_inv_res == 0) {
+        terminal_write("PASS (rollback, truncation, stat, reuse)\n");
+    } else {
+        terminal_write("FAIL, code ");
+        terminal_write_number((uint32_t)(-fs_inv_res));
+        terminal_putchar('\n');
+    }
+
     terminal_write("========================================\n");
     terminal_write("              JARVIS-OS\n");
     terminal_write("========================================\n\n");

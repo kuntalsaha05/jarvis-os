@@ -24,6 +24,14 @@ def main():
         "memory\n"
         "pftest\n"
         "ipc\n"
+        "df\n"
+        "touch test_smoke.txt\n"
+        "write test_smoke.txt Hello_Jarvis_FS\n"
+        "cat test_smoke.txt\n"
+        "trunc test_smoke.txt 5\n"
+        "cat test_smoke.txt\n"
+        "rm test_smoke.txt\n"
+        "fstest\n"
         "ls\n"
         "cat kernel.cfg\n"
 
@@ -71,6 +79,8 @@ def main():
         ("Page Allocator Invariants", "Page allocator invariants: PASS"),
         ("Page Fault Diagnostics Boot", "Page fault diagnostics: PASS"),
         ("RAM Disk Test", "RAM disk test: PASS"),
+        ("Block Device Invariants Boot", "Block device invariants: PASS"),
+        ("Filesystem Invariants Boot", "Filesystem invariants: PASS"),
         ("Cooperative Switching", "Task A iteration"),
         ("Cooperative Return", "Context-switch test: returned to kernel"),
         ("Register/Stack Integrity Test", "Register/stack integrity test: PASS"),
@@ -117,7 +127,14 @@ def main():
         ("IPC Subsystem Invariants Shell", "IPC Subsystem Invariants Verification: PASS"),
         ("JARVIS-FS Directory", "JARVIS-FS Directory Listing"),
         ("Software Interrupt Syscall", "SYSTEM CALL DISPATCH BENCHMARK"),
-        ("Syscall int $0x80 Execution", "SYS_GET_TICKS via int $0x80")
+        ("Syscall int $0x80 Execution", "SYS_GET_TICKS via int $0x80"),
+        ("Storage Volume Metrics (df)", "JARVIS-FS Storage & Volume Metrics:"),
+        ("Touch File Creation", "touch: created file 'test_smoke.txt'"),
+        ("Write File Content", "write: successfully wrote 15 bytes to 'test_smoke.txt'"),
+        ("Truncate File Size", "trunc: truncated 'test_smoke.txt' to 5 bytes"),
+        ("Remove File", "rm: deleted file 'test_smoke.txt'"),
+        ("Filesystem Invariants Shell", "JARVIS-FS Invariants:    PASS"),
+        ("Block Device Invariants Shell", "Block Device Invariants: PASS")
     ]
 
 

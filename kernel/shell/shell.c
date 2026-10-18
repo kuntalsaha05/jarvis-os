@@ -10,6 +10,7 @@
 
 #include "ipc/sync_demo.h"
 #include "storage/ramdisk.h"
+#include "storage/block.h"
 #include "storage/fs.h"
 #include "algorithms/sched_sim.h"
 #include "algorithms/page_replace.h"
@@ -63,10 +64,16 @@ static void print_help(void)
     terminal_write("  memory     - Show page allocator & heap memory usage\n");
     terminal_write("  pftest     - Test safe page-fault diagnostics & decoder\n\n");
 
-    terminal_write("File Operations:\n");
-    terminal_write("  ls         - List files in JARVIS-FS directory\n");
-    terminal_write("  cat <file> - Display file content from JARVIS-FS\n");
-    terminal_write("  files      - Run JARVIS-FS Filesystem benchmark\n\n");
+    terminal_write("File & Storage Operations:\n");
+    terminal_write("  ls             - List files in JARVIS-FS directory\n");
+    terminal_write("  cat <file>     - Display file content from JARVIS-FS\n");
+    terminal_write("  touch <file>   - Create an empty file\n");
+    terminal_write("  write <f> <txt>- Write text to file\n");
+    terminal_write("  rm <file>      - Delete file from JARVIS-FS\n");
+    terminal_write("  trunc <f> <sz> - Truncate file to specified byte size\n");
+    terminal_write("  df / fsstat    - Display storage & filesystem volume stats\n");
+    terminal_write("  fstest         - Run filesystem & storage invariant tests\n");
+    terminal_write("  files          - Run JARVIS-FS Filesystem benchmark\n\n");
     terminal_write("OS Concept Demonstrations:\n");
     terminal_write("  sched      - Run CPU Scheduling Benchmark (FCFS, SJF, RR)\n");
     terminal_write("  paging     - Run Page Replacement & Belady's Anomaly demo\n");
@@ -381,6 +388,171 @@ static void execute_command(void)
             }
             fs_close(fd);
         }
+    }
+    else if (cmd_starts_with(command, "touch")) {
+        const char *filename = command + 5;
+        while (*filename == ' ') filename++;
+        if (*filename == '\0') {
+            terminal_write("\nUsage: touch <filename>\n");
+        } else {
+            int ret = fs_create(filename);
+            if (ret == FS_OK) {
+                terminal_write("\ntouch: created file '");
+                terminal_write(filename);
+                terminal_write("'\n");
+            } else if (ret == FS_ERR_ALREADY_EXISTS) {
+                terminal_write("\ntouch: file '");
+                terminal_write(filename);
+                terminal_write("' already exists\n");
+            } else {
+                terminal_write("\ntouch: failed to create file (error ");
+                terminal_write_number((uint32_t)(-ret));
+                terminal_write(")\n");
+            }
+        }
+    }
+    else if (cmd_starts_with(command, "write")) {
+        const char *p = command + 5;
+        while (*p == ' ') p++;
+        char fname[32];
+        int fi = 0;
+        while (*p && *p != ' ' && fi < 31) {
+            fname[fi++] = *p++;
+        }
+        fname[fi] = '\0';
+        while (*p == ' ') p++;
+        if (fname[0] == '\0' || *p == '\0') {
+            terminal_write("\nUsage: write <filename> <text>\n");
+        } else {
+            int fd = fs_open(fname);
+            if (fd < 0) {
+                fs_create(fname);
+                fd = fs_open(fname);
+            }
+            if (fd < 0) {
+                terminal_write("\nwrite: failed to open/create '");
+                terminal_write(fname);
+                terminal_write("'\n");
+            } else {
+                uint32_t len = 0;
+                while (p[len]) len++;
+                int w = fs_write(fd, p, len);
+                fs_close(fd);
+                if (w >= 0) {
+                    terminal_write("\nwrite: successfully wrote ");
+                    terminal_write_number((uint32_t)w);
+                    terminal_write(" bytes to '");
+                    terminal_write(fname);
+                    terminal_write("'\n");
+                } else {
+                    terminal_write("\nwrite: error writing to '");
+                    terminal_write(fname);
+                    terminal_write("'\n");
+                }
+            }
+        }
+    }
+    else if (cmd_starts_with(command, "rm") || cmd_starts_with(command, "del")) {
+        const char *p = cmd_starts_with(command, "rm") ? command + 2 : command + 3;
+        while (*p == ' ') p++;
+        if (*p == '\0') {
+            terminal_write("\nUsage: rm <filename>\n");
+        } else {
+            int ret = fs_delete(p);
+            if (ret == FS_OK) {
+                terminal_write("\nrm: deleted file '");
+                terminal_write(p);
+                terminal_write("'\n");
+            } else {
+                terminal_write("\nrm: file '");
+                terminal_write(p);
+                terminal_write("' not found\n");
+            }
+        }
+    }
+    else if (cmd_starts_with(command, "trunc")) {
+        const char *p = command + 5;
+        while (*p == ' ') p++;
+        char fname[32];
+        int fi = 0;
+        while (*p && *p != ' ' && fi < 31) {
+            fname[fi++] = *p++;
+        }
+        fname[fi] = '\0';
+        while (*p == ' ') p++;
+        if (fname[0] == '\0' || *p == '\0') {
+            terminal_write("\nUsage: trunc <filename> <size_bytes>\n");
+        } else {
+            uint32_t new_size = 0;
+            while (*p >= '0' && *p <= '9') {
+                new_size = new_size * 10 + (*p - '0');
+                p++;
+            }
+            int ret = fs_truncate_by_name(fname, new_size);
+            if (ret == FS_OK) {
+                terminal_write("\ntrunc: truncated '");
+                terminal_write(fname);
+                terminal_write("' to ");
+                terminal_write_number(new_size);
+                terminal_write(" bytes\n");
+            } else {
+                terminal_write("\ntrunc: failed (code ");
+                terminal_write_number((uint32_t)(-ret));
+                terminal_write(")\n");
+            }
+        }
+    }
+    else if (cmd_match(command, "df") || cmd_match(command, "fsstat")) {
+        fs_info_t info;
+        if (fs_get_info(&info) == FS_OK) {
+            terminal_write("\nJARVIS-FS Storage & Volume Metrics:\n");
+            terminal_write("  Superblock Magic:           0x4A415256 (JARV)\n");
+            terminal_write("  Device Backing:             RAMDisk (Volatile, In-Memory)\n");
+            terminal_write("  Sector / Block Size:        ");
+            terminal_write_number(info.block_size);
+            terminal_write(" bytes\n  Total Volume Capacity:      ");
+            terminal_write_number(info.total_blocks * info.block_size / 1024);
+            terminal_write(" KiB (");
+            terminal_write_number(info.total_blocks);
+            terminal_write(" blocks)\n  Free Storage Blocks:        ");
+            terminal_write_number(info.free_blocks);
+            terminal_write(" / ");
+            terminal_write_number(info.total_blocks);
+            terminal_write("\n  Used Storage Blocks:        ");
+            terminal_write_number(info.used_blocks);
+            terminal_write("\n  Total Inode Slots:          ");
+            terminal_write_number(info.total_inodes);
+            terminal_write("\n  Active Files (Inodes Used): ");
+            terminal_write_number(info.used_inodes);
+            terminal_write("\n  Free Inode Slots:           ");
+            terminal_write_number(info.free_inodes);
+            terminal_write("\n  Max Direct File Size:       ");
+            terminal_write_number(info.max_file_size);
+            terminal_write(" bytes (8 direct blocks)\n");
+        } else {
+            terminal_write("\ndf: filesystem not mounted\n");
+        }
+    }
+    else if (cmd_match(command, "fstest")) {
+        terminal_write("\n========================================\n");
+        terminal_write("     FILESYSTEM & STORAGE INVARIANTS    \n");
+        terminal_write("========================================\n");
+        int b_res = test_block_device_invariants();
+        terminal_write("Block Device Invariants: ");
+        terminal_write(b_res == 0 ? "PASS\n" : "FAIL\n");
+
+        int fs_res = test_fs_invariants();
+        terminal_write("JARVIS-FS Invariants:    ");
+        terminal_write(fs_res == 0 ? "PASS\n" : "FAIL\n");
+
+        int fa_res = test_file_alloc_invariants();
+        terminal_write("File Allocation Methods: ");
+        terminal_write(fa_res == 0 ? "PASS\n" : "FAIL\n");
+
+        int ds_res = test_disk_sched_invariants();
+        terminal_write("Disk Seek Scheduling:    ");
+        terminal_write(ds_res == 0 ? "PASS\n" : "FAIL\n");
+        terminal_write("========================================\n");
     }
     else if (cmd_match(command, "threads") || cmd_match(command, "ps")) {
         process_stats_t pstats;

@@ -183,3 +183,46 @@ void disk_sched_run_demo(void)
     print_disk_result("4. C-SCAN", &res);
 }
 
+int test_disk_sched_invariants(void)
+{
+    static const uint32_t reqs[8] = { 98, 183, 37, 122, 14, 124, 65, 67 };
+    uint32_t initial_head = 53;
+    uint32_t disk_size = 200;
+    disk_sched_result_t res;
+
+    /* 1. FCFS benchmark */
+    disk_sched_fcfs(initial_head, reqs, 8, &res);
+    if (res.count != 8) return -1;
+    if (res.total_head_movement != 640) return -2;
+
+    /* 2. SSTF benchmark */
+    disk_sched_sstf(initial_head, reqs, 8, &res);
+    if (res.count != 8) return -3;
+    if (res.total_head_movement != 236) return -4;
+
+    /* 3. SCAN benchmark */
+    disk_sched_scan(initial_head, reqs, 8, disk_size, 1, &res);
+    if (res.count != 8) return -5;
+    if (res.total_head_movement != 331) return -6;
+
+    /* 4. C-SCAN benchmark */
+    disk_sched_cscan(initial_head, reqs, 8, disk_size, &res);
+    if (res.count != 8) return -7;
+    if (res.total_head_movement != 382) return -8;
+
+    /* 5. Edge Cases: 0 requests */
+    disk_sched_fcfs(initial_head, reqs, 0, &res);
+    if (res.count != 0 || res.total_head_movement != 0) return -9;
+
+    disk_sched_sstf(initial_head, reqs, 0, &res);
+    if (res.count != 0 || res.total_head_movement != 0) return -10;
+
+    /* 6. Single request matching current head position (seek = 0) */
+    uint32_t single_req[1] = { 53 };
+    disk_sched_fcfs(53, single_req, 1, &res);
+    if (res.total_head_movement != 0) return -11;
+
+    return 0;
+}
+
+

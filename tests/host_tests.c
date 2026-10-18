@@ -13,6 +13,9 @@
 #include "ipc/semaphore.h"
 #include "ipc/sync_demo.h"
 #include "process/process.h"
+#include "storage/block.h"
+#include "storage/ramdisk.h"
+#include "storage/fs.h"
 
 /* Provide stubs for terminal functions when running in host unit test mode */
 void terminal_write(const char *str) {
@@ -581,6 +584,66 @@ static void test_deadlock_scenarios_invariants(void)
     printf("PASS\n");
 }
 
+static void test_storage_block_device_invariants_host(void)
+{
+    printf("[TEST] Block Device Interface & Bounds Checks... ");
+
+    assert(ramdisk_init() == 0);
+    assert(block_device_is_ready() == 1);
+    assert(block_device_get_sector_size() == 512);
+    assert(block_device_get_sector_count() == 128);
+    assert(block_device_get_capacity_bytes() == 128 * 512);
+
+    /* Run standard block device invariant suite */
+    int bdev_res = test_block_device_invariants();
+    assert(bdev_res == 0);
+
+    printf("PASS\n");
+}
+
+static void test_filesystem_invariants_host(void)
+{
+    printf("[TEST] JARVIS-FS Filesystem Correctness & Rollback... ");
+
+    /* Run comprehensive filesystem invariant suite */
+    int fs_res = test_fs_invariants();
+    assert(fs_res == 0);
+
+    /* Additional host-level validation of fs_stat and fs_get_info */
+    fs_info_t info;
+    assert(fs_get_info(&info) == FS_OK);
+    assert(info.magic == FS_MAGIC);
+    assert(info.used_inodes >= 1); /* kernel.cfg was restored */
+
+    fs_stat_t st;
+    assert(fs_stat("kernel.cfg", &st) == FS_OK);
+    assert(st.size > 0);
+    assert(st.blocks_allocated >= 1);
+    assert(st.in_use == 1);
+
+    /* Test path normalization with leading slash */
+    fs_stat_t st_slash;
+    assert(fs_stat("/kernel.cfg", &st_slash) == FS_OK);
+    assert(st_slash.size == st.size);
+
+    printf("PASS\n");
+}
+
+static void test_file_alloc_and_disk_sched_invariants_host(void)
+{
+    printf("[TEST] File Allocation (Reuse) & Disk Scheduling Invariants... ");
+
+    /* Test file allocation contiguous, linked, indexed, freeing, reuse */
+    int fa_res = test_file_alloc_invariants();
+    assert(fa_res == 0);
+
+    /* Test disk scheduling FCFS, SSTF, SCAN, C-SCAN invariants & edge cases */
+    int ds_res = test_disk_sched_invariants();
+    assert(ds_res == 0);
+
+    printf("PASS\n");
+}
+
 int main(void)
 {
     printf("==================================================\n");
@@ -599,6 +662,9 @@ int main(void)
     test_ipc_subsystem_invariants();
     test_synchronization_invariants_host();
     test_deadlock_scenarios_invariants();
+    test_storage_block_device_invariants_host();
+    test_filesystem_invariants_host();
+    test_file_alloc_and_disk_sched_invariants_host();
 
     printf("==================================================\n");
     printf("   ALL HOST UNIT TESTS COMPLETED SUCCESSFULLY!    \n");

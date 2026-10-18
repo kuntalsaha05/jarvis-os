@@ -123,6 +123,25 @@ class TestAICompanion(unittest.TestCase):
         except Exception:
             pass
 
+    def test_jarvis_fs_image_tool(self):
+        from scripts.jarvis_fs_tool import JarvisFSImage, FS_MAGIC
+        img = JarvisFSImage.format_new()
+        sb = img.get_superblock()
+        self.assertEqual(sb["magic"], FS_MAGIC)
+        self.assertTrue(sb["valid"])
+        self.assertEqual(sb["free_blocks"], 120)
+
+        test_data = b"Testing JARVIS-FS python tool integration"
+        img.add_file("host_test.txt", test_data)
+        files = img.list_files()
+        self.assertEqual(len(files), 1)
+        self.assertEqual(files[0]["name"], "host_test.txt")
+        self.assertEqual(files[0]["size"], len(test_data))
+
+        readback = img.read_file("host_test.txt")
+        self.assertEqual(readback, test_data)
+
+
 
 if __name__ == "__main__":
     unittest.main()

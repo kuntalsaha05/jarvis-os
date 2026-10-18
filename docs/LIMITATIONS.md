@@ -51,8 +51,11 @@ To maximize clarity for students and evaluators, JARVIS-OS cleanly distinguishes
 
 ## 4. Storage & Persistence
 
-- **RAM Disk**: The block device (`kernel/storage/ramdisk.c`) is allocated in RAM (128 sectors of 512 bytes = 64 KiB).
-- **Volatile Storage**: Data written to JARVIS-FS files is retained in memory for the duration of the QEMU session, but is not persisted to physical host storage after the emulator shuts down. Real physical disk drivers (IDE, AHCI, NVMe) are not implemented.
+- **RAM Disk Volatility**: The block device (`kernel/storage/ramdisk.c`) is allocated in RAM (128 sectors of 512 bytes = 64 KiB). Data written to JARVIS-FS files is retained in memory for the duration of the session, but is not persisted to physical host storage after the emulator shuts down. Real physical disk drivers (IDE, AHCI, NVMe) are not implemented.
+- **Single Flat Directory Namespace**: JARVIS-FS currently supports a flat single directory with up to 16 files (`FS_MAX_FILES = 16`) and filenames up to 27 characters (`FS_MAX_FILENAME = 28`). Hierarchical subdirectories (e.g. `/dir/subdir/file`) are not implemented.
+- **Direct Block Pointers & Capacity Limits**: Inode structures have 8 direct block pointers (`FS_DIRECT_BLOCKS = 8`), giving a hard file size limit of 4,096 bytes (4 KiB). Indirect, double-indirect, and triple-indirect block pointers are educational concepts demonstrated in `kernel/algorithms/file_alloc.c` rather than active hardware mappings in JARVIS-FS.
+- **Host Image Tool**: Host-side formatting, inspection, file injection, and extraction are provided by `scripts/jarvis_fs_tool.py` for offline testing of disk image consistency.
+
 
 ---
 

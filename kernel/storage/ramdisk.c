@@ -11,7 +11,10 @@ static uint8_t ramdisk_data[RAMDISK_SECTOR_SIZE * RAMDISK_SECTOR_COUNT];
 static int ramdisk_read(uint64_t lba, uint32_t count, void *buffer)
 {
     if (buffer == NULL)
-        return -1;
+        return BLOCK_ERR_INVALID_PARAM;
+
+    if (lba >= RAMDISK_SECTOR_COUNT || count > RAMDISK_SECTOR_COUNT - lba)
+        return BLOCK_ERR_OUT_OF_BOUNDS;
 
     for (uint32_t i = 0; i < count; i++)
     {
@@ -22,13 +25,16 @@ static int ramdisk_read(uint64_t lba, uint32_t count, void *buffer)
         }
     }
 
-    return 0;
+    return BLOCK_OK;
 }
 
 static int ramdisk_write(uint64_t lba, uint32_t count, const void *buffer)
 {
     if (buffer == NULL)
-        return -1;
+        return BLOCK_ERR_INVALID_PARAM;
+
+    if (lba >= RAMDISK_SECTOR_COUNT || count > RAMDISK_SECTOR_COUNT - lba)
+        return BLOCK_ERR_OUT_OF_BOUNDS;
 
     for (uint32_t i = 0; i < count; i++)
     {
@@ -39,7 +45,7 @@ static int ramdisk_write(uint64_t lba, uint32_t count, const void *buffer)
         }
     }
 
-    return 0;
+    return BLOCK_OK;
 }
 
 int ramdisk_init(void)
@@ -48,9 +54,9 @@ int ramdisk_init(void)
         .read = ramdisk_read,
         .write = ramdisk_write,
         .sector_size = RAMDISK_SECTOR_SIZE,
-        .sector_count = RAMDISK_SECTOR_COUNT
+        .sector_count = RAMDISK_SECTOR_COUNT,
+        .name = "RAMDisk (Volatile 64KB)"
     };
 
     return block_device_register(&device);
 }
-

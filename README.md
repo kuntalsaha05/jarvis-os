@@ -50,10 +50,12 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
    - **Concurrency & Sync**: Counting semaphores with task wait queues and atomic wakeups, mutex locks with owner PID validation (`MUTEX_ERR_NOT_OWNER`) and recursive deadlock rejection (`MUTEX_ERR_DEADLOCK`), Producer-Consumer bounded buffer, and Reader-Writer problem.
    - **Inter-Process Communication (IPC)**: Multi-queue subsystem (4 isolated queues), typed messages with sender/receiver PIDs, bounded buffer capacity enforcement (`IPC_ERR_FULL`, `IPC_ERR_EMPTY`), scheduler-integrated blocking receive with tick timeout (`IPC_ERR_TIMEOUT`), and queue ownership/destruction safety.
 
-4. **Storage & Minimal Filesystem (JARVIS-FS)**:
-   - Block device abstraction with RAM disk backing (128 sectors of 512 bytes = 64 KiB).
+4. **Storage & Resilient Filesystem (JARVIS-FS)**:
+   - Clean block device abstraction with bounds checking and RAM disk backing (128 sectors of 512 bytes = 64 KiB).
    - Lightweight filesystem with superblock (magic `0x4A415256`), inode table, direct data blocks, creation, opening, reading, writing, and directory listing.
-   - Default configuration file `kernel.cfg` pre-created on format; active file descriptor invalidation on delete.
+   - Filesystem resilience: atomic rollback on partial allocation failure, file truncation (`trunc`), path normalization (leading slashes), active file descriptor invalidation on delete, and block reuse.
+   - Host-side image inspection and creation utility (`scripts/jarvis_fs_tool.py`) for offline disk image verification.
+
 
 5. **AI-First Modular Host Companion**:
    - Host-side Python companion service (`jarvis/`) communicating over serial/CLI bridge.
@@ -127,6 +129,12 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 | `files` | Run JARVIS-FS filesystem formatting, file creation, and directory listing |
 | `ls` | List files stored in JARVIS-FS with sizes and block counts |
 | `cat <file>` | Display content of a file stored in JARVIS-FS (e.g. `cat kernel.cfg`) |
+| `touch <file>` | Create an empty file in JARVIS-FS |
+| `write <f> <txt>` | Write text payload to a file |
+| `trunc <f> <sz>` | Truncate file to specified byte size (frees or allocates blocks) |
+| `rm <file>` | Delete file from JARVIS-FS (reclaims direct blocks and inode) |
+| `df` / `fsstat` | Display filesystem capacity, block allocation, and inode metrics |
+| `fstest` | Run in-kernel storage, filesystem, and scheduling invariant tests |
 | `syscall` | Run software interrupt `int $0x80` System Call Dispatch demo |
 | `ipc` | Run Bounded Message Queue IPC test |
 | `panic` | Trigger a test kernel panic with CR2/CR3/RSP register dump and red banner |
@@ -139,6 +147,7 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 ## Documentation
 
 Detailed technical architecture and design docs are available in `docs/`:
+- [`docs/PHASE5_VERIFICATION.md`](docs/PHASE5_VERIFICATION.md): Phase 5 storage and filesystem reliability verification report.
 - [`docs/PHASE4_VERIFICATION.md`](docs/PHASE4_VERIFICATION.md): Phase 4 IPC, synchronization, and deadlocks verification report.
 - [`docs/PHASE3_VERIFICATION.md`](docs/PHASE3_VERIFICATION.md): Phase 3 process, context-switch, and memory correctness report.
 - [`docs/PHASE2_VERIFICATION.md`](docs/PHASE2_VERIFICATION.md): Phase 2 hardware, interrupt, and IRQ1 verification report.
