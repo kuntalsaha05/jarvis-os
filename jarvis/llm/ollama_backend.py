@@ -20,7 +20,7 @@ class OllamaBackend(LLMInterface):
         timeout: float = 30.0
     ):
         self.base_url = (base_url or os.environ.get("JARVIS_OLLAMA_URL", "http://localhost:11434")).rstrip("/")
-        self.model_name = model_name or os.environ.get("JARVIS_OLLAMA_MODEL", "llama3")
+        self.model_name = model_name or os.environ.get("JARVIS_OLLAMA_MODEL", "")
         self.default_timeout = timeout
         self.initialized = False
         self.initialize()
@@ -48,8 +48,10 @@ class OllamaBackend(LLMInterface):
                 if resp.status == 200:
                     data = json.loads(resp.read().decode("utf-8"))
                     models = [m.get("name") for m in data.get("models", [])]
-                    model_found = any(self.model_name in m for m in models) if models else False
-                    active_model = self.model_name if (model_found or not models) else (models[0] if models else self.model_name)
+                    model_found = any(self.model_name in m for m in models) if (self.model_name and models) else False
+                    if not model_found and models:
+                        self.model_name = models[0]
+                    active_model = self.model_name or (models[0] if models else "llama3")
                     return {
                         "backend": "Ollama",
                         "status": "READY",
