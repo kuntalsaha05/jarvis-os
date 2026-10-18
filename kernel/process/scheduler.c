@@ -19,7 +19,7 @@ void scheduler_init(void)
     current_process = 0;
     bootstrap_frame = 0;
     scheduler_started = 0;
-    rr_cursor = MAX_PROCESSES - 1;
+    rr_cursor = 1;
     quantum_ticks = 0;
     rr_quantum = SCHEDULER_RR_QUANTUM;
     sched_stats = (scheduler_stats_t){0};
@@ -58,31 +58,52 @@ process_t *scheduler_select_next(void)
 {
     process_t *selected = 0;
 
+    /* 1. Try to schedule runnable user tasks (index 1 to MAX_PROCESSES - 1) */
     if (current_algorithm == SCHEDULER_RR) {
-        for (uint32_t offset = 1; offset <= MAX_PROCESSES; offset++) {
-            uint32_t i = (rr_cursor + offset) % MAX_PROCESSES;
+        for (uint32_t offset = 1; offset < MAX_PROCESSES; offset++) {
+            uint32_t i = 1 + ((rr_cursor - 1 + offset) % (MAX_PROCESSES - 1));
             process_t *p = process_get_by_index(i);
             if (p != 0 && p->state == PROCESS_READY) {
                 rr_cursor = i;
                 return p;
             }
         }
-        return 0;
+    } else {
+        for (uint32_t i = 1; i < MAX_PROCESSES; i++) {
+            process_t *p = process_get_by_index(i);
+            if (p == 0 || p->state != PROCESS_READY)
+                continue;
+
+            if (selected == 0 ||
+                (current_algorithm == SCHEDULER_SJF &&
+                 p->cpu_time < selected->cpu_time) ||
+                (current_algorithm == SCHEDULER_FCFS &&
+                 p->creation_tick < selected->creation_tick))
+                selected = p;
+        }
+        if (selected != 0)
+            return selected;
     }
 
-    for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+    /* 2. If no user task is READY, check if any user task is BLOCKED */
+    int has_blocked = 0;
+    for (uint32_t i = 1; i < MAX_PROCESSES; i++) {
         process_t *p = process_get_by_index(i);
-        if (p == 0 || p->state != PROCESS_READY)
-            continue;
-
-        if (selected == 0 ||
-            (current_algorithm == SCHEDULER_SJF &&
-             p->cpu_time < selected->cpu_time) ||
-            (current_algorithm == SCHEDULER_FCFS &&
-             p->creation_tick < selected->creation_tick))
-            selected = p;
+        if (p != 0 && p->state == PROCESS_BLOCKED) {
+            has_blocked = 1;
+            break;
+        }
     }
-    return selected;
+
+    /* If blocked tasks exist, return the idle task at index 0 (PID 0) */
+    if (has_blocked) {
+        process_t *idle = process_get(0);
+        if (idle != 0 && idle->state == PROCESS_READY)
+            return idle;
+    }
+
+    /* All user tasks are terminated and none are blocked -> return 0 */
+    return 0;
 }
 
 process_t *scheduler_current_process(void)

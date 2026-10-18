@@ -18,6 +18,9 @@ In accordance with the project's educational mission, this document explicitly r
 - **Thread Model**: `thread_create(entry, arg, priority)` spawns kernel threads sharing the single address space, allocating a dedicated 4 KiB kernel stack and setting up the x86-64 System V calling convention (`%rdi = arg`).
 - **Memory Map vs Physical Allocator**: Multiboot 0.6.96 memory discovery reads the BIOS/GRUB memory map and reports total available physical memory (e.g. 255 MiB in QEMU). The current educational bitmap page allocator (`kernel/memory/page.c`) manages a static pool of 64 pages (256 KiB) starting after the kernel binary for deterministic educational predictability.
 - **System Call Entry Mechanism**: Hardware/software interrupt entry is fully implemented via `int $0x80`. The interrupt descriptor table configures IDT gate `0x80` with DPL 3 (`0xEE`), assembly stub `syscall_stub` preserves all general-purpose registers (`rax..r15`), extracts arguments (`rax`=number, `rdi`=arg1, `rsi`=arg2, `rdx`=arg3), calls `syscall_dispatch`, and returns the result in `rax` via `iretq`. A C wrapper `syscall()` is provided in `kernel/syscall/syscall.c`.
+- **Paging & Address Space Boundary**: Bootloader paging (`kernel/arch/x86_64/boot.S`) maps only the first 2 MiB of physical memory using a 2 MiB huge page (`0x00000000 - 0x001FFFFF`). Any access to virtual addresses $\ge$ 2 MiB (`0x00200000`) triggers a Page Fault (`#PF`, vector 14). The `#PF` handler decomposes error codes for educational diagnostics, but demand paging, copy-on-write, and paging out to disk are educational simulations in `kernel/algorithms/page_replace.c`, not active hardware virtual memory routines.
+- **Stack Protection**: Thread stacks are 4 KiB statically allocated arrays in BSS. In the absence of MMU guard pages, stack integrity is verified using stack canaries and callee-saved register checks (`%rbx, %r12-%r15`) across context switches.
+- **Dedicated Idle Task (PID 0)**: When all user processes are blocked (e.g. `process_sleep`), the scheduler runs a low-priority idle task (PID 0) executing `sti; hlt` until timer ticks wake runnable tasks. When all user tasks terminate and none are blocked, the scheduler safely restores the kernel bootstrap frame.
 - **True Ring-3 Hardware Boundary Requirements**: A full hardware user-mode boundary requires the following components which are outside the scope of this monolithic educational kernel:
   1. **Task State Segment (TSS)**: A 64-bit TSS descriptor loaded into the CPU Task Register (`ltr`) specifying `RSP0` so that hardware transitions from Ring 3 to Ring 0 have a clean, trusted kernel stack.
   2. **GDT Selectors for Ring 3**: User Code Descriptor (DPL 3, selector with RPL=3) and User Data Descriptor (DPL 3, selector with RPL=3).
@@ -26,6 +29,7 @@ In accordance with the project's educational mission, this document explicitly r
 - **Educational Scope**: JARVIS-OS consciously operates as a single-privilege kernel monolith. All system call benchmarks execute honestly within this architectural reality without fabricating false user-space isolation.
 
 ---
+
 
 ## 3. Real Kernel Subsystems vs Educational Simulators
 

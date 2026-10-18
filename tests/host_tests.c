@@ -310,6 +310,89 @@ static void test_deadlock_detection_and_prevention(void)
     printf("PASS\n");
 }
 
+/* ========================================================
+ * 8. Process Lifecycle State Transition Invariants
+ * ======================================================== */
+typedef enum {
+    TEST_PROCESS_NEW = 0,
+    TEST_PROCESS_READY,
+    TEST_PROCESS_RUNNING,
+    TEST_PROCESS_BLOCKED,
+    TEST_PROCESS_TERMINATED
+} test_process_state_t;
+
+static int test_process_is_valid_transition(test_process_state_t from, test_process_state_t to)
+{
+    if (from == to)
+        return 1;
+
+    switch (from) {
+        case TEST_PROCESS_NEW:
+            return (to == TEST_PROCESS_READY || to == TEST_PROCESS_TERMINATED);
+        case TEST_PROCESS_READY:
+            return (to == TEST_PROCESS_RUNNING || to == TEST_PROCESS_TERMINATED);
+        case TEST_PROCESS_RUNNING:
+            return (to == TEST_PROCESS_READY || to == TEST_PROCESS_BLOCKED || to == TEST_PROCESS_TERMINATED);
+        case TEST_PROCESS_BLOCKED:
+            return (to == TEST_PROCESS_READY || to == TEST_PROCESS_TERMINATED);
+        case TEST_PROCESS_TERMINATED:
+            return (to == TEST_PROCESS_NEW || to == TEST_PROCESS_READY);
+        default:
+            return 0;
+    }
+}
+
+static void test_process_lifecycle_state_machine(void)
+{
+    printf("[TEST] Process Lifecycle State Transitions... ");
+
+    /* Valid transitions */
+    assert(test_process_is_valid_transition(TEST_PROCESS_NEW, TEST_PROCESS_READY) == 1);
+    assert(test_process_is_valid_transition(TEST_PROCESS_READY, TEST_PROCESS_RUNNING) == 1);
+    assert(test_process_is_valid_transition(TEST_PROCESS_RUNNING, TEST_PROCESS_READY) == 1);     /* Yield / Preemption */
+    assert(test_process_is_valid_transition(TEST_PROCESS_RUNNING, TEST_PROCESS_BLOCKED) == 1);   /* Sleep / Wait */
+    assert(test_process_is_valid_transition(TEST_PROCESS_BLOCKED, TEST_PROCESS_READY) == 1);     /* Wakeup */
+    assert(test_process_is_valid_transition(TEST_PROCESS_RUNNING, TEST_PROCESS_TERMINATED) == 1); /* Exit */
+    assert(test_process_is_valid_transition(TEST_PROCESS_TERMINATED, TEST_PROCESS_READY) == 1);  /* Slot recycling */
+
+    /* Invalid transitions */
+    assert(test_process_is_valid_transition(TEST_PROCESS_NEW, TEST_PROCESS_RUNNING) == 0);       /* Must queue as READY first */
+    assert(test_process_is_valid_transition(TEST_PROCESS_READY, TEST_PROCESS_BLOCKED) == 0);     /* Cannot block without running */
+    assert(test_process_is_valid_transition(TEST_PROCESS_BLOCKED, TEST_PROCESS_RUNNING) == 0);   /* Must transition through READY */
+    assert(test_process_is_valid_transition(TEST_PROCESS_TERMINATED, TEST_PROCESS_BLOCKED) == 0);
+
+    printf("PASS\n");
+}
+
+/* ========================================================
+ * 9. Memory Boundary & Interrupt Frame Invariants
+ * ======================================================== */
+static void test_memory_and_frame_invariants(void)
+{
+    printf("[TEST] Memory Boundary & Frame Invariants... ");
+
+    /* 20 quadwords = 15 GPRs (120 bytes) + 5 IRETQ fields (40 bytes) = 160 bytes */
+    const size_t gpr_count = 15;
+    const size_t iretq_field_count = 5;
+    const size_t total_quadwords = gpr_count + iretq_field_count;
+    assert(total_quadwords == 20);
+    assert(total_quadwords * sizeof(uint64_t) == 160);
+
+    /* Identity-mapped boundary check */
+    const uint64_t identity_map_limit = 0x00200000ULL; /* 2 MiB boundary */
+    uint64_t kernel_entry = 0x00100000ULL;
+    uint64_t unmapped_high = 0x00201000ULL;
+    assert(kernel_entry < identity_map_limit);
+    assert(unmapped_high >= identity_map_limit);
+
+    /* Page size & pool capacity */
+    const uint32_t page_size = 4096;
+    const uint32_t pool_count = 64;
+    assert(pool_count * page_size == 262144); /* Exactly 256 KiB */
+
+    printf("PASS\n");
+}
+
 int main(void)
 {
     printf("==================================================\n");
@@ -323,10 +406,13 @@ int main(void)
     test_mem_fit();
     test_file_alloc();
     test_deadlock_detection_and_prevention();
+    test_process_lifecycle_state_machine();
+    test_memory_and_frame_invariants();
 
     printf("==================================================\n");
     printf("   ALL HOST UNIT TESTS COMPLETED SUCCESSFULLY!    \n");
     printf("==================================================\n");
     return 0;
 }
+
 

@@ -21,6 +21,8 @@ def main():
         "status\n"
         "irq\n"
         "threads\n"
+        "memory\n"
+        "pftest\n"
         "ls\n"
         "cat kernel.cfg\n"
         "sched\n"
@@ -44,7 +46,8 @@ def main():
             stderr=subprocess.PIPE
         )
 
-        stdout_data, stderr_data = proc.communicate(input=commands_to_send, timeout=10)
+        stdout_data, stderr_data = proc.communicate(input=commands_to_send, timeout=12)
+
     except subprocess.TimeoutExpired:
         proc.kill()
         stdout_data, stderr_data = proc.communicate()
@@ -63,18 +66,25 @@ def main():
         ("Physical Memory Discovery", "Physical Memory: Lower"),
         ("BIOS/GRUB Memory Map", "BIOS/GRUB Memory Map:"),
         ("Page Allocator Test", "Page allocator test: PASS"),
+        ("Page Allocator Invariants", "Page allocator invariants: PASS"),
+        ("Page Fault Diagnostics Boot", "Page fault diagnostics: PASS"),
         ("RAM Disk Test", "RAM disk test: PASS"),
-        ("Kernel Online", "Status: ONLINE"),
         ("Cooperative Switching", "Task A iteration"),
         ("Cooperative Return", "Context-switch test: returned to kernel"),
+        ("Register/Stack Integrity Test", "Register/stack integrity test: PASS"),
         ("Timer Preemption Execution", "PIT timer preemption test starting"),
         ("Timer Preemption Quanta Switch", "[PREEMPT 1] Preempted across timer quanta, completed!"),
         ("Timer Preemption Verified", "PIT timer preemption test: PASS (involuntary timer preemption verified)"),
+        ("Kernel Online", "Status: ONLINE"),
         ("Shell Ready", "jarvis>"),
         ("Interrupt Subsystem IRQ0/1", "Interrupt Subsystem Status:"),
         ("Timer IRQ0 Vector", "Vector 32: timer_stub (IDT gate 0x20)"),
         ("Keyboard IRQ1 Vector", "Vector 33: keyboard_stub (IDT gate 0x21)"),
         ("Process & Thread Metrics", "Process & Thread Subsystem Statistics:"),
+        ("Memory Subsystem Boundary", "Identity-Mapped Boundary: 0x00000000 - 0x001FFFFF"),
+        ("Page Fault Decoder Self-Test", "Diagnostic decoder test: PASS"),
+        ("Page Fault Diagnosis Output", "Sample Diagnosis 1 (Simulated supervisor read at 0x00205000)"),
+
         ("Context Switch Counting", "Total Context Switches:"),
         ("Quantum Preemption Counting", "Quantum Preemptions:"),
         ("Directory Listing (ls)", "JARVIS-FS Directory Listing:"),

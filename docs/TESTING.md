@@ -43,6 +43,8 @@ make test
 [TEST] Memory Allocation Fit (First, Best, Worst)... PASS
 [TEST] File Allocation Methods (Contiguous, Linked, Indexed)... PASS
 [TEST] Deadlock Detection (WFG/Matrix) & Prevention... PASS
+[TEST] Process Lifecycle State Transitions... PASS
+[TEST] Memory Boundary & Frame Invariants... PASS
 ==================================================
    ALL HOST UNIT TESTS COMPLETED SUCCESSFULLY!    
 ==================================================
@@ -58,13 +60,13 @@ make test-ai
 python3 -m unittest discover -s tests -p "test_*.py"
 ..........
 ----------------------------------------------------------------------
-Ran 10 tests in 0.001s
+Ran 10 tests in 0.002s
 
 OK
 ```
 
 ### 3.3 Automated QEMU Smoke Test (`make test-qemu`)
-Spawns QEMU in headless mode, connects to standard I/O, feeds shell commands, and verifies output against 40 required checkpoints:
+Spawns QEMU in headless mode, connects to standard I/O, feeds shell commands, and verifies output against 46 required checkpoints:
 ```bash
 make test-qemu
 ```
@@ -73,25 +75,31 @@ make test-qemu
 ==================================================
       JARVIS-OS AUTOMATED QEMU SMOKE TEST         
 ==================================================
-Captured 12290 bytes of serial output in 10.01s.
+Captured 13897 bytes of serial output in 12.01s.
 
   [PASS] Early Serial Debug Output
   [PASS] Multiboot 0.6.96 Hand-off
   [PASS] Physical Memory Discovery
   [PASS] BIOS/GRUB Memory Map
   [PASS] Page Allocator Test
+  [PASS] Page Allocator Invariants
+  [PASS] Page Fault Diagnostics Boot
   [PASS] RAM Disk Test
-  [PASS] Kernel Online
   [PASS] Cooperative Switching
   [PASS] Cooperative Return
+  [PASS] Register/Stack Integrity Test
   [PASS] Timer Preemption Execution
   [PASS] Timer Preemption Quanta Switch
   [PASS] Timer Preemption Verified
+  [PASS] Kernel Online
   [PASS] Shell Ready
   [PASS] Interrupt Subsystem IRQ0/1
   [PASS] Timer IRQ0 Vector
   [PASS] Keyboard IRQ1 Vector
   [PASS] Process & Thread Metrics
+  [PASS] Memory Subsystem Boundary
+  [PASS] Page Fault Decoder Self-Test
+  [PASS] Page Fault Diagnosis Output
   [PASS] Context Switch Counting
   [PASS] Quantum Preemption Counting
   [PASS] Directory Listing (ls)
@@ -117,9 +125,10 @@ Captured 12290 bytes of serial output in 10.01s.
   [PASS] Syscall int $0x80 Execution
 
 ==================================================
-   ALL 40 VERIFICATION CHECKPOINTS PASSED!       
+   ALL 46 VERIFICATION CHECKPOINTS PASSED!       
 ==================================================
 ```
+
 
 ### 3.4 Full Verification Suite (`make test-all`)
 Executes all test suites in sequence:

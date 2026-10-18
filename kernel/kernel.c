@@ -93,6 +93,92 @@ static void preempt_task_2(void)
     terminal_write("[PREEMPT 2] Preempted across timer quanta, completed!\n");
 }
 
+static volatile int reg_test_passed = 0;
+static volatile int reg_test_iterations_1 = 0;
+static volatile int reg_test_iterations_2 = 0;
+
+static void reg_test_task_1(void)
+{
+    volatile uint64_t stack_canary = 0xCAFEBABE11111111ULL;
+
+    for (int i = 0; i < 3; i++) {
+        __asm__ volatile (
+            "movq $0x1111222233334444, %%rbx\n"
+            "movq $0xA1A1A1A1B1B1B1B1, %%r12\n"
+            "movq $0xA2A2A2A2B2B2B2B2, %%r13\n"
+            "movq $0xA3A3A3A3B3B3B3B3, %%r14\n"
+            "movq $0xA4A4A4A4B4B4B4B4, %%r15\n"
+            :
+            :
+            : "rbx", "r12", "r13", "r14", "r15"
+        );
+
+        scheduler_yield();
+
+        uint64_t cur_rbx, cur_r12, cur_r13, cur_r14, cur_r15;
+        __asm__ volatile (
+            "movq %%rbx, %0\n"
+            "movq %%r12, %1\n"
+            "movq %%r13, %2\n"
+            "movq %%r14, %3\n"
+            "movq %%r15, %4\n"
+            : "=r"(cur_rbx), "=r"(cur_r12), "=r"(cur_r13), "=r"(cur_r14), "=r"(cur_r15)
+        );
+
+        if (cur_rbx != 0x1111222233334444ULL ||
+            cur_r12 != 0xA1A1A1A1B1B1B1B1ULL ||
+            cur_r13 != 0xA2A2A2A2B2B2B2B2ULL ||
+            cur_r14 != 0xA3A3A3A3B3B3B3B3ULL ||
+            cur_r15 != 0xA4A4A4A4B4B4B4B4ULL ||
+            stack_canary != 0xCAFEBABE11111111ULL) {
+            reg_test_passed = -1;
+            return;
+        }
+        reg_test_iterations_1++;
+    }
+}
+
+static void reg_test_task_2(void)
+{
+    volatile uint64_t stack_canary = 0xDEADBEEF22222222ULL;
+
+    for (int i = 0; i < 3; i++) {
+        __asm__ volatile (
+            "movq $0x5555666677778888, %%rbx\n"
+            "movq $0xC1C1C1C1D1D1D1D1, %%r12\n"
+            "movq $0xC2C2C2C2D2D2D2D2, %%r13\n"
+            "movq $0xC3C3C3C3D3D3D3D3, %%r14\n"
+            "movq $0xC4C4C4C4D4D4D4D4, %%r15\n"
+            :
+            :
+            : "rbx", "r12", "r13", "r14", "r15"
+        );
+
+        scheduler_yield();
+
+        uint64_t cur_rbx, cur_r12, cur_r13, cur_r14, cur_r15;
+        __asm__ volatile (
+            "movq %%rbx, %0\n"
+            "movq %%r12, %1\n"
+            "movq %%r13, %2\n"
+            "movq %%r14, %3\n"
+            "movq %%r15, %4\n"
+            : "=r"(cur_rbx), "=r"(cur_r12), "=r"(cur_r13), "=r"(cur_r14), "=r"(cur_r15)
+        );
+
+        if (cur_rbx != 0x5555666677778888ULL ||
+            cur_r12 != 0xC1C1C1C1D1D1D1D1ULL ||
+            cur_r13 != 0xC2C2C2C2D2D2D2D2ULL ||
+            cur_r14 != 0xC3C3C3C3D3D3D3D3ULL ||
+            cur_r15 != 0xC4C4C4C4D4D4D4D4ULL ||
+            stack_canary != 0xDEADBEEF22222222ULL) {
+            reg_test_passed = -2;
+            return;
+        }
+        reg_test_iterations_2++;
+    }
+}
+
 static void test_page_allocator(void)
 {
     page_init();
@@ -119,7 +205,26 @@ static void test_page_allocator(void)
         "Page allocator test: PASS\n" :
         "Page allocator test: FAIL\n"
     );
+
+    int inv_res = test_page_allocator_invariants();
+    if (inv_res == 0) {
+        terminal_write("Page allocator invariants: PASS (64-page pool, bounds, double-free, alignment)\n");
+    } else {
+        terminal_write("Page allocator invariants: FAIL, code ");
+        terminal_write_number((uint32_t)(-inv_res));
+        terminal_putchar('\n');
+    }
+
+    int pf_res = test_page_fault_diagnostics();
+    if (pf_res == 0) {
+        terminal_write("Page fault diagnostics: PASS (safe error decoding & 2 MiB boundary check)\n");
+    } else {
+        terminal_write("Page fault diagnostics: FAIL, code ");
+        terminal_write_number((uint32_t)(-pf_res));
+        terminal_putchar('\n');
+    }
 }
+
 
 void kernel_main(uint64_t magic, uint64_t mb_info_addr)
 {
@@ -177,7 +282,34 @@ void kernel_main(uint64_t magic, uint64_t mb_info_addr)
         terminal_write("Context-switch test: task creation failed\n");
     }
 
+    terminal_write("Register/stack integrity test starting...\n");
+    reg_test_passed = 0;
+    reg_test_iterations_1 = 0;
+    reg_test_iterations_2 = 0;
+
+    int r1 = process_create((uint64_t)reg_test_task_1, 1);
+    int r2 = process_create((uint64_t)reg_test_task_2, 1);
+    if (r1 > 0 && r2 > 0)
+    {
+        scheduler_start();
+        if (reg_test_passed == 0 && reg_test_iterations_1 == 3 && reg_test_iterations_2 == 3)
+        {
+            terminal_write("Register/stack integrity test: PASS (callee-saved regs & stack canaries preserved)\n");
+        }
+        else
+        {
+            terminal_write("Register/stack integrity test: FAIL, code ");
+            terminal_write_number((uint32_t)(-reg_test_passed));
+            terminal_putchar('\n');
+        }
+    }
+    else
+    {
+        terminal_write("Register/stack integrity test: task creation failed\n");
+    }
+
     terminal_write("PIT timer preemption test starting (tasks do not yield)...\n");
+
     scheduler_stats_t stats_pre;
     scheduler_get_stats(&stats_pre);
     p1_count = 0;

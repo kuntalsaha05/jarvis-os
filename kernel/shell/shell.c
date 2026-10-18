@@ -5,7 +5,9 @@
 #include "process/scheduler.h"
 #include "memory/heap.h"
 #include "memory/page.h"
+#include "interrupts/idt.h"
 #include "ipc/ipc.h"
+
 #include "ipc/sync_demo.h"
 #include "storage/ramdisk.h"
 #include "storage/fs.h"
@@ -58,7 +60,9 @@ static void print_help(void)
     terminal_write("  process    - Show process manager & TCB stats\n");
     terminal_write("  threads    - Show comprehensive thread & scheduler metrics\n");
     terminal_write("  scheduler  - Show current kernel scheduler algorithm\n");
-    terminal_write("  memory     - Show page allocator & heap memory usage\n\n");
+    terminal_write("  memory     - Show page allocator & heap memory usage\n");
+    terminal_write("  pftest     - Test safe page-fault diagnostics & decoder\n\n");
+
     terminal_write("File Operations:\n");
     terminal_write("  ls         - List files in JARVIS-FS directory\n");
     terminal_write("  cat <file> - Display file content from JARVIS-FS\n");
@@ -249,17 +253,55 @@ static void execute_command(void)
         sched_sim_run_demo();
     }
     else if (cmd_match(command, "memory")) {
+        page_stats_t pstats;
+        page_get_stats(&pstats);
+
         terminal_write("\nMemory Management Subsystem:\n");
-        terminal_write("Page Size: 4096 bytes\n");
-        terminal_write("Physical Page Pool: 64 pages (256 KiB)\n");
-        terminal_write("Free Physical Pages: ");
-        terminal_write_number(page_free_count());
+        terminal_write("  Page Size:                4096 bytes\n");
+        terminal_write("  Physical Page Pool:       ");
+        terminal_write_number(pstats.total_pages);
+        terminal_write(" pages (256 KiB)\n");
+        terminal_write("  Free Physical Pages:      ");
+        terminal_write_number(pstats.free_pages);
         terminal_putchar('\n');
-        terminal_write("Kernel Heap Capacity: ");
+        terminal_write("  Allocated Pages:          ");
+        terminal_write_number(pstats.allocated_pages);
+        terminal_putchar('\n');
+        terminal_write("  Cumulative Allocs:        ");
+        terminal_write_number((uint32_t)pstats.total_allocations);
+        terminal_putchar('\n');
+        terminal_write("  Cumulative Frees:         ");
+        terminal_write_number((uint32_t)pstats.total_frees);
+        terminal_putchar('\n');
+        terminal_write("  Page Pool Base:           0x");
+        terminal_write_hex((uint32_t)pstats.pool_base);
+        terminal_putchar('\n');
+        terminal_write("  Page Pool End:            0x");
+        terminal_write_hex((uint32_t)pstats.pool_end);
+        terminal_putchar('\n');
+        terminal_write("  Identity-Mapped Boundary: 0x00000000 - 0x001FFFFF (2 MiB PDE)\n");
+        terminal_write("  Unmapped Address Space:   >= 0x00200000\n");
+        terminal_write("  Kernel Heap Capacity:     ");
         terminal_write_number(KERNEL_HEAP_SIZE / 1024);
         terminal_write(" KiB\n");
-        terminal_write("(Type 'paging' to run page replacement benchmark)\n");
+        terminal_write("  (Type 'pftest' for page fault diagnostics, 'paging' for page replacement)\n");
     }
+    else if (cmd_match(command, "pftest")) {
+        terminal_write("\n=== Safe Page Fault Diagnostic Self-Test ===\n");
+        int res = test_page_fault_diagnostics();
+        if (res == 0) {
+            terminal_write("Diagnostic decoder test: PASS\n\n");
+            terminal_write("Sample Diagnosis 1 (Simulated supervisor read at 0x00205000):\n");
+            page_fault_diagnose(0x205000ULL, 0x0);
+            terminal_write("\nSample Diagnosis 2 (Simulated user write at 0x00050000):\n");
+            page_fault_diagnose(0x50000ULL, 0x7);
+        } else {
+            terminal_write("Diagnostic decoder test: FAIL, code ");
+            terminal_write_number((uint32_t)(-res));
+            terminal_putchar('\n');
+        }
+    }
+
     else if (cmd_match(command, "paging")) {
         page_replace_run_demo();
     }

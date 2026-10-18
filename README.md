@@ -27,14 +27,17 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
    - Dual-output console: VGA text buffer (`0xB8000`), COM1 serial port (`0x3F8`), and QEMU/Bochs debug port (`0xE9`).
    - Dual keyboard input: PS/2 controller (`0x60/0x64`) and COM1 serial input with VT100 terminal handling.
 
-2. **Preemptive & Cooperative Scheduling & Threads**:
-   - Process Control Blocks (TCB), process creation, termination, and state tracking (NEW, READY, RUNNING, BLOCKED, TERMINATED).
+2. **Preemptive & Cooperative Scheduling, Threads & Process Correctness**:
+   - Process Control Blocks (TCB), process creation, termination, and strict state transition validation (`process_is_valid_transition`: NEW, READY, RUNNING, BLOCKED, TERMINATED).
+   - Dedicated idle task (PID 0) executing `sti; hlt` without starving runnable user tasks.
    - Thread support: `thread_create(entry, arg, priority)` passing `arg` in `%rdi` via System V AMD64 ABI.
    - Blocking and sleeping: `process_block()`, `process_unblock()`, and `process_sleep(ticks)` integrated with PIT timer scheduler wakeups.
    - Interrupt-driven Round-Robin preemption via PIT timer (configurable quantum via `scheduler_set_quantum`, default 5 ticks).
+   - Callee-saved register integrity (%rbx, %r12-%r15) and stack canaries verified across repeated yields and involuntary preemption.
    - Scheduler instrumentation tracking context switches, quantum preemptions, voluntary yields, and timer ticks.
    - Cooperative yielding via software interrupt `int $0x81`.
-   - Exact 20-quadword x86-64 `iretq` frame restoration (15 GPRs + RIP + CS + RFLAGS + RSP + SS).
+   - Exact 20-quadword x86-64 `iretq` frame restoration (15 GPRs + RIP + CS + RFLAGS + RSP + SS) obeying AMD64 Long Mode 5-field pop semantics for all privilege levels.
+
 
 3. **Classic OS Algorithm Implementations & Demonstrations**:
    - **CPU Scheduling**: FCFS, SJF, and Round Robin with arrival time, burst time, completion time, turnaround time, and waiting time calculations.
@@ -111,6 +114,7 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 | `process` / `threads` / `ps` | Display process table, thread states, priorities, and stacks |
 | `scheduler` | Display Round-Robin quantum and scheduler statistics |
 | `memory` | Display physical page allocator statistics and available frames |
+| `pftest` | Test safe page-fault diagnostics and address decoding without crashing |
 | `sched` | Run CPU Scheduling Benchmark (FCFS, SJF, Round Robin) |
 | `paging` | Run Page Replacement Benchmark and Belady's Anomaly demo |
 | `fit` | Run Memory Allocation Fit demo (First, Best, Worst Fit & fragmentation) |
@@ -134,6 +138,7 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 ## Documentation
 
 Detailed technical architecture and design docs are available in `docs/`:
+- [`docs/PHASE3_VERIFICATION.md`](docs/PHASE3_VERIFICATION.md): Phase 3 process, context-switch, and memory correctness report.
 - [`docs/PHASE2_VERIFICATION.md`](docs/PHASE2_VERIFICATION.md): Phase 2 hardware, interrupt, and IRQ1 verification report.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): Comprehensive system architecture and interrupt flow.
 - [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md): 28-point feature status tracker with verified evidence.
@@ -142,4 +147,5 @@ Detailed technical architecture and design docs are available in `docs/`:
 - [`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md): Host companion design, security allowlists, and local LLM backends.
 - [`docs/TESTING.md`](docs/TESTING.md): Verification methodology across host tests, Python tests, and QEMU smoke tests.
 - [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md): Architectural boundaries, uniprocessor assumptions, and educational scope.
+
 

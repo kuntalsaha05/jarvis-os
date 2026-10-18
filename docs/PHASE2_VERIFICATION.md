@@ -183,3 +183,4 @@ Captured 12290 bytes of serial output in 10.01s.
    - Uniprocessor execution only; SMP multi-core dispatching is not supported.
 3. **Dual Input Handling**:
    - Both PS/2 keyboard IRQ1 and COM1 serial line 0x3F8 are polled transparently in `keyboard_read_char()`, enabling seamless operation in graphical QEMU windows and headless automated test harnesses alike.
+

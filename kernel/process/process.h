@@ -55,5 +55,6 @@ int process_unblock(uint32_t pid);
 int process_sleep(uint64_t ticks);
 uint32_t process_get_count(void);
 void process_get_stats(process_stats_t *stats);
+int process_is_valid_transition(process_state_t from, process_state_t to);
 
 #endif
