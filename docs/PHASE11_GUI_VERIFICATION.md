@@ -169,3 +169,4 @@ Automated visual test (`scripts/qemu_gui_test.py`) boots QEMU with Bochs BGA lin
 1. **Hardware Acceleration**: The 2D rasterizer and window manager currently operate purely via linear software blitting to the VBE/BGA linear framebuffer. While fast and responsive at 100 Hz timer tick intervals, future phases could leverage 2D hardware blit accelerators (e.g. Bochs DISPI acceleration or VirtIO-GPU).
 2. **True Window Overlap Clipping**: Currently, windows render in ascending z-order from back to front (Painter's Algorithm). This produces visually perfect rendering with minimal memory overhead, but full occluded-rectangle clipping (e.g. BSP trees or dirty region clipping) can be added to reduce VRAM memory bus writes.
 3. **Resizable Windows**: Windows currently support Normal, Minimized, and Maximized states. Arbitrary corner-drag resizing can be introduced in subsequent updates.
+
