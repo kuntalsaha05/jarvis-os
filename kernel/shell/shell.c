@@ -175,9 +175,10 @@ static void print_ai_status(void)
     terminal_write("Transport: COM1 Serial Line / Host CLI Adapter\n");
     terminal_write("Telemetry Provenance: LIVE_KERNEL / OFFLINE_SIMULATION\n");
     terminal_write("Supported LLM Backends:\n");
-    terminal_write("  1. MockLLMBackend   - Deterministic test & CI verification\n");
+    terminal_write("  1. OllamaBackend    - Local Ollama daemon (Default: http://localhost:11434)\n");
     terminal_write("  2. LlamaCppBackend  - High-performance local quantized GGUF\n");
-    terminal_write("  3. AirLLMBackend    - Layer-by-layer VRAM-optimized streaming\n\n");
+    terminal_write("  3. AirLLMBackend    - Layer-by-layer VRAM-optimized streaming\n");
+    terminal_write("  4. MockLLMBackend   - Offline test fixture & CI verification\n\n");
     terminal_write("Enforced Security & Permission Model:\n");
     terminal_write("  - [READ_ONLY]       kernel.query_status, memory.get_stats,\n");
     terminal_write("                      scheduler.get_state, storage.list_files,\n");

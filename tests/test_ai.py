@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from jarvis.llm.manager import LLMManager
 from jarvis.llm.mock_backend import MockLLMBackend
+from jarvis.llm.ollama_backend import OllamaBackend
 from jarvis.llm.llama_backend import LlamaCppBackend
 from jarvis.llm.airllm_backend import AirLLMBackend
 from jarvis.tools.registry import ToolRegistry, PermissionLevel
@@ -28,6 +29,17 @@ class TestAICompanion(unittest.TestCase):
 
         response = self.mock_backend.generate("Test prompt")
         self.assertIn("JARVIS", response)
+
+    def test_ollama_backend_offline_fallback(self):
+        backend = OllamaBackend(base_url="http://127.0.0.1:9999", model_name="test-model")
+        info = backend.model_info()
+        self.assertEqual(info["backend"], "Ollama")
+        self.assertFalse(info["available"])
+
+        res = backend.generate("Hello")
+        self.assertIn("Ollama Error", res)
+        health = backend.health_check()
+        self.assertEqual(health["status"], "OFFLINE")
 
     def test_llama_backend_offline_fallback(self):
         # Without model weights configured, should gracefully report offline

@@ -5,9 +5,10 @@ import argparse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from jarvis.llm.manager import LLMManager
-from jarvis.llm.mock_backend import MockLLMBackend
+from jarvis.llm.ollama_backend import OllamaBackend
 from jarvis.llm.llama_backend import LlamaCppBackend
 from jarvis.llm.airllm_backend import AirLLMBackend
+from jarvis.llm.mock_backend import MockLLMBackend
 from jarvis.tools.registry import ToolRegistry, PermissionLevel
 from jarvis.bridge.protocol import PROTOCOL_VERSION
 from jarvis.bridge.companion import JarvisCompanion
@@ -103,9 +104,9 @@ def main():
     parser = argparse.ArgumentParser(description="JARVIS-OS Host-Side AI Companion")
     parser.add_argument(
         "--backend",
-        choices=["mock", "llama", "airllm"],
-        default="mock",
-        help="LLM inference backend to activate (default: mock)"
+        choices=["ollama", "llama", "airllm", "mock"],
+        default="ollama",
+        help="LLM inference backend to activate (default: ollama)"
     )
     parser.add_argument("--query", type=str, help="Single query to ask JARVIS")
     parser.add_argument("--interactive", action="store_true", help="Launch interactive chat session")
@@ -118,7 +119,12 @@ def main():
     args = parser.parse_args()
 
     # Instantiate requested backend
-    if args.backend == "llama":
+    if args.backend == "ollama":
+        backend = OllamaBackend()
+        if not backend.is_available() and (args.demo or not (args.interactive or args.query or args.status or args.explain)):
+            # In automated demo mode without a running Ollama daemon, use mock fallback to maintain CI stability
+            backend = MockLLMBackend()
+    elif args.backend == "llama":
         backend = LlamaCppBackend()
     elif args.backend == "airllm":
         backend = AirLLMBackend()

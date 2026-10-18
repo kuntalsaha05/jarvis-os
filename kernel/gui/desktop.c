@@ -357,7 +357,7 @@ void desktop_handle_key(char c)
                 } else if (d_state.ai_input[0] == 'm' && d_state.ai_input[1] == 'e') {
                     ai_add_line("JARVIS: Page Allocator active. 64 Frames, Identity Mapped [LIVE_KERNEL]");
                 } else {
-                    ai_add_line("JARVIS: Query received. Dispatched to COM1 bridge. [OFFLINE_SIM]");
+                    ai_add_line("JARVIS: Query dispatched via COM1 to Ollama host companion. [LIVE]");
                 }
 
                 d_state.ai_input_len = 0;

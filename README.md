@@ -59,7 +59,7 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
 
 5. **AI-First Modular Host Companion & Autonomous Agent**:
    - Host-side Python companion service (`jarvis/`) communicating over a versioned line-delimited JSON bridge (Protocol v1.0).
-   - Abstract `LLMInterface` with pluggable backends: **MockLLMBackend** (deterministic CI testing & simulated timeouts), **LlamaCppBackend** (local quantized GGUF inference), and **AirLLMBackend** (layer-by-layer low-VRAM execution).
+   - Abstract `LLMInterface` with pluggable backends: **OllamaBackend** (default: local Ollama daemon on `localhost:11434`), **LlamaCppBackend** (local quantized GGUF inference), **AirLLMBackend** (layer-by-layer low-VRAM execution), and **MockLLMBackend** (offline test fixture for CI).
    - 8-Step Autonomous Agent loop (`JarvisAgent.run_cycle`): accepts requests, builds context, determines tools, validates schemas, requests approvals, executes safely, returns telemetry, and synthesizes answers disclosing data provenance (`LIVE_KERNEL` vs `OFFLINE_SIMULATION`).
    - 4-Tier Security Model in `ToolRegistry`: `READ_ONLY`, `SAFE_DIAGNOSTIC`, `PRIVILEGED`, and `DESTRUCTIVE`.
    - Mandatory user confirmation callbacks for privileged (`system.trigger_panic`) and destructive (`storage.format_disk`) operations.
