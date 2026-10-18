@@ -4,11 +4,15 @@ In accordance with the project's educational mission, this document explicitly r
 
 ---
 
-## 1. Uniprocessor Hardware Assumptions
+## 1. Uniprocessor Hardware Assumptions & Concurrency Primitives
 
 - **Interrupt Controller**: JARVIS-OS uses the legacy Intel 8259 PIC (Programmable Interrupt Controller) rather than the modern APIC/x2APIC.
-- **Multiprocessing**: The kernel operates on a single CPU core. Concurrency primitives (mutexes, semaphores) use atomic test-and-set instructions and spin-pauses suitable for uniprocessor preemption. SMP (Symmetric Multiprocessing) is not implemented.
+- **Multiprocessing**: The kernel operates on a single CPU core. Concurrency primitives (mutexes, semaphores) use atomic test-and-set built-ins (`__atomic_compare_exchange_n`, `__atomic_fetch_add`, `__atomic_exchange_n`) and CPU pause instructions (`pause`) suitable for uniprocessor preemption. SMP (Symmetric Multiprocessing) bus locking, cross-core IPIs, and memory barrier synchronization across multiple cores are not implemented.
 - **Sleep Queues & Timer Interrupts**: Task sleeping (`process_sleep`) is handled by recording a target `wake_tick` on the PCB; the uniprocessor PIT timer interrupt sweeps runnable/blocked tasks and transitions them back to `PROCESS_READY` upon tick expiration.
+- **Mutex Ownership Enforcement**: Mutexes (`mutex_t` in `kernel/ipc/sync_demo.c`) track caller ownership via `owner_pid` and recursion state. Recursive locking returns `MUTEX_ERR_DEADLOCK` (-1) to actively prevent self-deadlocks. Unlocking by a thread other than the current owner is rejected with `MUTEX_ERR_NOT_OWNER` (-2) and leaves the mutex locked.
+- **Counting Semaphore Wait Queue Bounds**: In `kernel/ipc/semaphore.h`, the wait queue has a fixed capacity of 8 waiting task PIDs (`MAX_WAITING_TASKS = 8`). If more than 8 tasks block on a single semaphore, `semaphore_wait` returns `SEMAPHORE_ERR_QUEUE_FULL` (-2) to prevent silent task dropping.
+- **IPC Multi-Queue Bounds**: The kernel supports up to 4 isolated queues (`IPC_MAX_QUEUES = 4`), each holding a bounded circular buffer of up to 16 messages of 64 bytes. Senders to full queues receive `IPC_ERR_FULL` (-1); receivers on empty queues receive `IPC_ERR_EMPTY` (-2) in non-blocking mode or block with timeout (`IPC_ERR_TIMEOUT = -3`) in scheduler-integrated mode.
+
 
 ---
 

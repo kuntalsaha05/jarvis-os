@@ -9,6 +9,10 @@
 #include "algorithms/mem_fit.h"
 #include "algorithms/file_alloc.h"
 #include "algorithms/deadlock.h"
+#include "ipc/ipc.h"
+#include "ipc/semaphore.h"
+#include "ipc/sync_demo.h"
+#include "process/process.h"
 
 /* Provide stubs for terminal functions when running in host unit test mode */
 void terminal_write(const char *str) {
@@ -22,6 +26,29 @@ void terminal_putchar(char c) {
 void terminal_write_number(uint32_t n) {
     printf("%u", n);
 }
+
+/* Provide stubs for scheduler and timer when running in host unit test mode */
+volatile uint64_t timer_ticks = 100;
+
+static process_t host_curr_proc = { .pid = 1, .state = PROCESS_RUNNING };
+
+process_t *scheduler_current_process(void) {
+    return &host_curr_proc;
+}
+
+int process_block(uint32_t pid) {
+    (void)pid;
+    return 0;
+}
+
+int process_unblock(uint32_t pid) {
+    (void)pid;
+    return 0;
+}
+
+void scheduler_yield(void) {
+}
+
 
 /* ========================================================
  * 1. CPU Scheduling Simulation Tests
@@ -393,6 +420,167 @@ static void test_memory_and_frame_invariants(void)
     printf("PASS\n");
 }
 
+/* ========================================================
+ * 10. IPC Message Queue Invariants Tests
+ * ======================================================== */
+static void test_ipc_subsystem_invariants(void)
+{
+    printf("[TEST] IPC Subsystem & Bounded Queues... ");
+    ipc_init();
+
+    int res = test_ipc_invariants();
+    assert(res == 0);
+
+    /* Test explicit sender/receiver routing & filtering */
+    ipc_message_t msg_to_p2 = {
+        .sender_pid = 1,
+        .receiver_pid = 2,
+        .type = 42,
+        .length = 5,
+        .data = "HELLO"
+    };
+    ipc_message_t msg_to_p3 = {
+        .sender_pid = 1,
+        .receiver_pid = 3,
+        .type = 43,
+        .length = 5,
+        .data = "WORLD"
+    };
+
+    assert(ipc_send(&msg_to_p2) == IPC_SUCCESS);
+    assert(ipc_send(&msg_to_p3) == IPC_SUCCESS);
+
+    /* P3 receives: should match msg_to_p3 */
+    ipc_message_t recv_p3;
+    assert(ipc_receive_filtered(&recv_p3, 3) == IPC_SUCCESS);
+    assert(recv_p3.receiver_pid == 3);
+    assert(recv_p3.type == 43);
+
+    /* P2 receives: should match msg_to_p2 */
+    ipc_message_t recv_p2;
+    assert(ipc_receive_filtered(&recv_p2, 2) == IPC_SUCCESS);
+    assert(recv_p2.receiver_pid == 2);
+    assert(recv_p2.type == 42);
+
+    /* No more messages for P2 */
+    assert(ipc_receive_filtered(&recv_p2, 2) == IPC_ERR_EMPTY);
+
+    printf("PASS\n");
+}
+
+/* ========================================================
+ * 11. Synchronization (Mutex Ownership & Semaphore) Tests
+ * ======================================================== */
+static void test_synchronization_invariants_host(void)
+{
+    printf("[TEST] Mutex Ownership & Semaphore Invariants... ");
+
+    assert(test_mutex_invariants() == 0);
+    assert(test_semaphore_invariants() == 0);
+    assert(test_sync_invariants() == 0);
+
+    /* Test strict mutex ownership across distinct PIDs */
+    mutex_t m;
+    mutex_init(&m);
+
+    /* PID 1 locks mutex */
+    host_curr_proc.pid = 1;
+    assert(mutex_lock(&m) == MUTEX_SUCCESS);
+    assert(mutex_is_locked(&m) == 1);
+    assert(mutex_get_owner(&m) == 1);
+
+    /* PID 2 tries to unlock PID 1's mutex -> REJECTED! */
+    host_curr_proc.pid = 2;
+    assert(mutex_unlock(&m) == MUTEX_ERR_NOT_OWNER);
+    assert(mutex_is_locked(&m) == 1);
+    assert(mutex_get_owner(&m) == 1);
+
+    /* PID 1 unlocks own mutex -> SUCCESS! */
+    host_curr_proc.pid = 1;
+    assert(mutex_unlock(&m) == MUTEX_SUCCESS);
+    assert(mutex_is_locked(&m) == 0);
+    assert(mutex_get_owner(&m) == 0);
+
+    printf("PASS\n");
+}
+
+/* ========================================================
+ * 12. Deadlock Scenarios & Prevention Invariants
+ * ======================================================== */
+static void test_deadlock_scenarios_invariants(void)
+{
+    printf("[TEST] Deadlock Scenarios & Havender Prevention... ");
+
+    /* 1. Banker's Algorithm Safe State */
+    banker_system_t bsys;
+    uint32_t avail[3] = { 3, 3, 2 };
+    banker_init_system(&bsys, 5, 3, avail);
+
+    uint32_t alloc[5][3] = {
+        { 0, 1, 0 },
+        { 2, 0, 0 },
+        { 3, 0, 2 },
+        { 2, 1, 1 },
+        { 0, 0, 2 }
+    };
+    uint32_t max[5][3] = {
+        { 7, 5, 3 },
+        { 3, 2, 2 },
+        { 9, 0, 2 },
+        { 2, 2, 2 },
+        { 4, 3, 3 }
+    };
+
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 3; j++) {
+            bsys.allocation[i][j] = alloc[i][j];
+            bsys.max[i][j] = max[i][j];
+        }
+    }
+    banker_compute_need(&bsys);
+
+    banker_safety_result_t bres;
+    banker_check_safety(&bsys, &bres);
+    assert(bres.is_safe == 1);
+    assert(bres.safe_sequence[0] == 1); /* P1 finishes first */
+
+    /* 2. Banker Request Error Checking:
+     * Case A: Exceeding maximum claim (Request > Need) -> -1
+     * Case B: Exceeding current available (Request > Available) -> -2
+     * Case C: Request <= Available, but causes unsafe state -> -3 (Deadlock Avoidance!)
+     */
+    uint32_t exceed_claim_req[3] = { 8, 0, 0 }; /* Need is {7,4,3} */
+    assert(banker_request_resources(&bsys, 0, exceed_claim_req) == -1);
+
+    uint32_t exceed_avail_req[3] = { 4, 0, 0 }; /* Avail is {3,3,2} */
+    assert(banker_request_resources(&bsys, 0, exceed_avail_req) == -2);
+
+    uint32_t unsafe_req[3] = { 3, 3, 0 }; /* Valid claim and <= avail, but leads to unsafe state */
+    int req_res = banker_request_resources(&bsys, 0, unsafe_req);
+    assert(req_res == -3); /* Correctly denied by Banker to avoid deadlock! */
+
+
+    /* 3. Deadlock Detection Matrix */
+    deadlock_detection_system_t dsys = {
+        .process_count = 2,
+        .resource_count = 2,
+        .available = { 0, 0 },
+        .allocation = { { 1, 0 }, { 0, 1 } },
+        .request = { { 0, 1 }, { 1, 0 } } /* Circular wait: P0 waits for R1, P1 waits for R0 */
+    };
+    deadlock_detection_result_t dres;
+    deadlock_detect(&dsys, &dres);
+    assert(dres.deadlock_detected == 1);
+    assert(dres.deadlocked_count == 2);
+
+    /* 4. Havender Prevention: Ascending Resource Ordering eliminates circular wait */
+    dsys.request[1][0] = 0; /* P1 cannot request lower-ranked resource while holding higher */
+    deadlock_detect(&dsys, &dres);
+    assert(dres.deadlock_detected == 0);
+
+    printf("PASS\n");
+}
+
 int main(void)
 {
     printf("==================================================\n");
@@ -408,11 +596,15 @@ int main(void)
     test_deadlock_detection_and_prevention();
     test_process_lifecycle_state_machine();
     test_memory_and_frame_invariants();
+    test_ipc_subsystem_invariants();
+    test_synchronization_invariants_host();
+    test_deadlock_scenarios_invariants();
 
     printf("==================================================\n");
     printf("   ALL HOST UNIT TESTS COMPLETED SUCCESSFULLY!    \n");
     printf("==================================================\n");
     return 0;
 }
+
 
 

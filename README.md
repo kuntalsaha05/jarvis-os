@@ -47,7 +47,8 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
    - **Deadlock Management**: Full Banker's Algorithm with Allocation, Max, Need ($Need = Max - Alloc$), and Available matrices; safety algorithm; safe-sequence generation; WFG/Matrix cycle detection; and Havender global ordering prevention.
    - **File Allocation Methods**: Contiguous, Linked, and Indexed block allocation benchmarks with directory lookups and overhead comparisons.
    - **Disk Head Scheduling**: FCFS, SSTF, SCAN (Elevator), and C-SCAN seek calculations and total head movement.
-   - **Concurrency & Sync**: Counting semaphores with atomic blocking `wait()`, mutex locks, Producer-Consumer bounded buffer, and Reader-Writer problem.
+   - **Concurrency & Sync**: Counting semaphores with task wait queues and atomic wakeups, mutex locks with owner PID validation (`MUTEX_ERR_NOT_OWNER`) and recursive deadlock rejection (`MUTEX_ERR_DEADLOCK`), Producer-Consumer bounded buffer, and Reader-Writer problem.
+   - **Inter-Process Communication (IPC)**: Multi-queue subsystem (4 isolated queues), typed messages with sender/receiver PIDs, bounded buffer capacity enforcement (`IPC_ERR_FULL`, `IPC_ERR_EMPTY`), scheduler-integrated blocking receive with tick timeout (`IPC_ERR_TIMEOUT`), and queue ownership/destruction safety.
 
 4. **Storage & Minimal Filesystem (JARVIS-FS)**:
    - Block device abstraction with RAM disk backing (128 sectors of 512 bytes = 64 KiB).
@@ -138,6 +139,7 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 ## Documentation
 
 Detailed technical architecture and design docs are available in `docs/`:
+- [`docs/PHASE4_VERIFICATION.md`](docs/PHASE4_VERIFICATION.md): Phase 4 IPC, synchronization, and deadlocks verification report.
 - [`docs/PHASE3_VERIFICATION.md`](docs/PHASE3_VERIFICATION.md): Phase 3 process, context-switch, and memory correctness report.
 - [`docs/PHASE2_VERIFICATION.md`](docs/PHASE2_VERIFICATION.md): Phase 2 hardware, interrupt, and IRQ1 verification report.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): Comprehensive system architecture and interrupt flow.

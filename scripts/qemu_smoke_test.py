@@ -23,8 +23,10 @@ def main():
         "threads\n"
         "memory\n"
         "pftest\n"
+        "ipc\n"
         "ls\n"
         "cat kernel.cfg\n"
+
         "sched\n"
         "paging\n"
         "fit\n"
@@ -105,10 +107,19 @@ def main():
         ("Synchronization Invariants", "SYNCHRONIZATION & IPC BENCHMARK"),
         ("Producer-Consumer Invariant", "Bounded buffer, FIFO order"),
         ("Reader-Writer Invariant", "Concurrent read allowed; exclusive write enforced"),
+        ("Mutex Ownership Protection", "Owner PID tracked; non-owner unlock rejected"),
+        ("Counting Semaphore Invariants", "Atomic counting, bounded limits, underflow/overflow protection"),
+        ("IPC Queue Invariants Boot", "IPC queue invariants: PASS"),
+        ("Synchronization Invariants Boot", "Synchronization invariants: PASS"),
+        ("IPC Message Passing Benchmark", "MESSAGE PASSING IPC BENCHMARK"),
+        ("IPC Queue Underflow", "Queue underflow check: PASS"),
+        ("IPC Queue Telemetry", "Queue Metrics Telemetry:"),
+        ("IPC Subsystem Invariants Shell", "IPC Subsystem Invariants Verification: PASS"),
         ("JARVIS-FS Directory", "JARVIS-FS Directory Listing"),
         ("Software Interrupt Syscall", "SYSTEM CALL DISPATCH BENCHMARK"),
         ("Syscall int $0x80 Execution", "SYS_GET_TICKS via int $0x80")
     ]
+
 
     all_passed = True
     for label, pattern in required_checkpoints:

@@ -17,9 +17,9 @@ In accordance with the project rules:
 
 | Test Suite | Implementation File | Runner Target | Scope |
 |---|---|---|---|
-| **Host Algorithm Tests** | `tests/host_tests.c` | `make test` | Mathematical verification of CPU scheduling (FCFS, SJF, RR), Page Replacement (FIFO, LRU, Optimal, Belady Anomaly), Banker's algorithm, Disk head scheduling, Memory Allocation Fit (First/Best/Worst Fit), File Allocation (Contiguous, Linked, Indexed), and Deadlock Detection (WFG/Matrix) & Prevention. |
+| **Host Algorithm Tests** | `tests/host_tests.c` | `make test` | Mathematical verification of CPU scheduling (FCFS, SJF, RR), Page Replacement (FIFO, LRU, Optimal, Belady Anomaly), Banker's algorithm, Disk head scheduling, Memory Allocation Fit (First/Best/Worst Fit), File Allocation (Contiguous, Linked, Indexed), Deadlock Detection (WFG/Matrix) & Prevention, Process lifecycle state transitions, Memory bounds, IPC subsystem/bounded queues, Mutex ownership & Semaphore invariants, and Deadlock scenarios (exceed max, insufficient, unsafe rejection). |
 | **AI Companion Tests** | `tests/test_ai.py` | `make test-ai` | Python unit tests for `MockLLMBackend`, `LlamaCppBackend` fallback, `AirLLMBackend` loading check, `ToolRegistry` allowlisting, input validation, audit logs, JSON protocol serialization, and explicit `OFFLINE_SIMULATION` telemetry labeling. |
-| **QEMU Smoke Test** | `scripts/qemu_smoke_test.py` | `make test-qemu` | Boots `build/jarvis.iso` headlessly, verifies 40 checkpoints covering Multiboot hand-off, memory mapping, early serial debug, preemption without yield, keyboard IRQ1 / timer IRQ0 interrupt handling, thread metrics, filesystem commands, and in-kernel benchmarks. |
+| **QEMU Smoke Test** | `scripts/qemu_smoke_test.py` | `make test-qemu` | Boots `build/jarvis.iso` headlessly, verifies 54 checkpoints covering Multiboot hand-off, memory mapping, early serial debug, preemption without yield, keyboard IRQ1 / timer IRQ0 interrupt handling, thread metrics, IPC message passing/queues, mutex ownership, counting semaphores, filesystem commands, and in-kernel benchmarks. |
 | **All Test Suites** | All of the above | `make test-all` | Runs all three test suites in sequence and reports aggregate status. |
 
 ---
@@ -27,7 +27,7 @@ In accordance with the project rules:
 ## 3. Running the Tests
 
 ### 3.1 Host Algorithm Tests (`make test`)
-Compiles the pure C algorithm modules (`sched_sim.c`, `page_replace.c`, `banker.c`, `disk_sched.c`, `mem_fit.c`, `file_alloc.c`, `deadlock.c`) with host `gcc`:
+Compiles the pure C algorithm modules (`sched_sim.c`, `page_replace.c`, `banker.c`, `disk_sched.c`, `mem_fit.c`, `file_alloc.c`, `deadlock.c`, `ipc.c`, `semaphore.c`, `sync_demo.c`) with host `gcc`:
 ```bash
 make test
 ```
@@ -45,6 +45,9 @@ make test
 [TEST] Deadlock Detection (WFG/Matrix) & Prevention... PASS
 [TEST] Process Lifecycle State Transitions... PASS
 [TEST] Memory Boundary & Frame Invariants... PASS
+[TEST] IPC Subsystem & Bounded Queues... PASS
+[TEST] Mutex Ownership & Semaphore Invariants... PASS
+[TEST] Deadlock Scenarios & Havender Prevention... PASS
 ==================================================
    ALL HOST UNIT TESTS COMPLETED SUCCESSFULLY!    
 ==================================================
@@ -66,7 +69,7 @@ OK
 ```
 
 ### 3.3 Automated QEMU Smoke Test (`make test-qemu`)
-Spawns QEMU in headless mode, connects to standard I/O, feeds shell commands, and verifies output against 46 required checkpoints:
+Spawns QEMU in headless mode, connects to standard I/O, feeds shell commands, and verifies output against 54 required checkpoints:
 ```bash
 make test-qemu
 ```
@@ -75,7 +78,7 @@ make test-qemu
 ==================================================
       JARVIS-OS AUTOMATED QEMU SMOKE TEST         
 ==================================================
-Captured 13897 bytes of serial output in 12.01s.
+Captured 14951 bytes of serial output in 12.01s.
 
   [PASS] Early Serial Debug Output
   [PASS] Multiboot 0.6.96 Hand-off
@@ -120,12 +123,20 @@ Captured 13897 bytes of serial output in 12.01s.
   [PASS] Synchronization Invariants
   [PASS] Producer-Consumer Invariant
   [PASS] Reader-Writer Invariant
+  [PASS] Mutex Ownership Protection
+  [PASS] Counting Semaphore Invariants
+  [PASS] IPC Queue Invariants Boot
+  [PASS] Synchronization Invariants Boot
+  [PASS] IPC Message Passing Benchmark
+  [PASS] IPC Queue Underflow
+  [PASS] IPC Queue Telemetry
+  [PASS] IPC Subsystem Invariants Shell
   [PASS] JARVIS-FS Directory
   [PASS] Software Interrupt Syscall
   [PASS] Syscall int $0x80 Execution
 
 ==================================================
-   ALL 46 VERIFICATION CHECKPOINTS PASSED!       
+   ALL 54 VERIFICATION CHECKPOINTS PASSED!       
 ==================================================
 ```
 

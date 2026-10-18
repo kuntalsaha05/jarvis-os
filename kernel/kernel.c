@@ -7,7 +7,11 @@
 #include "interrupts/pic.h"
 #include "interrupts/pit.h"
 #include "ipc/ipc.h"
+
+#include "ipc/semaphore.h"
+#include "ipc/sync_demo.h"
 #include "memory/heap.h"
+
 #include "process/process.h"
 #include "process/scheduler.h"
 #include "shell/shell.h"
@@ -263,7 +267,28 @@ void kernel_main(uint64_t magic, uint64_t mb_info_addr)
     pit_init(100);
     ipc_init();
 
+    terminal_write("IPC queue invariants: ");
+    int ipc_res = test_ipc_invariants();
+    if (ipc_res == 0) {
+        terminal_write("PASS (multi-queue, boundaries, ownership, capacity)\n");
+    } else {
+        terminal_write("FAIL, code ");
+        terminal_write_number((uint32_t)(-ipc_res));
+        terminal_putchar('\n');
+    }
+
+    terminal_write("Synchronization invariants: ");
+    int sync_res = test_sync_invariants();
+    if (sync_res == 0) {
+        terminal_write("PASS (mutex ownership, semaphore bounds, PC, RW)\n");
+    } else {
+        terminal_write("FAIL, code ");
+        terminal_write_number((uint32_t)(-sync_res));
+        terminal_putchar('\n');
+    }
+
     process_init();
+
     scheduler_init();
     scheduler_set_algorithm(SCHEDULER_RR);
 

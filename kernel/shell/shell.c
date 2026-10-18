@@ -93,8 +93,8 @@ static void demo_ipc(void)
     ipc_init();
     terminal_write("Queue initialized (Capacity: 16 messages)\n");
 
-    ipc_message_t msg1 = { .sender_pid = 1, .length = 5, .data = "PING" };
-    ipc_message_t msg2 = { .sender_pid = 2, .length = 5, .data = "PONG" };
+    ipc_message_t msg1 = { .sender_pid = 1, .receiver_pid = 2, .type = 1, .length = 5, .data = "PING" };
+    ipc_message_t msg2 = { .sender_pid = 2, .receiver_pid = 1, .type = 2, .length = 5, .data = "PONG" };
 
     int s1 = ipc_send(&msg1);
     int s2 = ipc_send(&msg2);
@@ -129,7 +129,31 @@ static void demo_ipc(void)
     int r3 = ipc_receive(&recv);
     terminal_write("Queue underflow check: ");
     terminal_write(r3 == -2 ? "PASS (Queue correctly empty)\n" : "FAIL\n");
+
+    terminal_write("\nQueue Metrics Telemetry:\n");
+    ipc_queue_stats_t qstats;
+    ipc_get_stats(0, &qstats);
+    terminal_write("  Queue Owner: PID ");
+    terminal_write_number(qstats.owner_pid);
+    terminal_write(" (System Default)\n  Queue Capacity:  ");
+    terminal_write_number(qstats.capacity);
+    terminal_write(" messages\n  Cumulative Sent: ");
+    terminal_write_number((uint32_t)qstats.total_sent);
+    terminal_write("\n  Cumulative Recv: ");
+    terminal_write_number((uint32_t)qstats.total_received);
+    terminal_write("\n  Dropped (Full):  ");
+    terminal_write_number((uint32_t)qstats.total_dropped_full);
+    terminal_putchar('\n');
+
+    terminal_write("\nIPC Subsystem Invariants Verification: ");
+    int inv_res = test_ipc_invariants();
+    if (inv_res == 0) {
+        terminal_write("PASS (multi-queue, boundaries, ownership, capacity)\n");
+    } else {
+        terminal_write("FAIL\n");
+    }
 }
+
 
 static void print_ai_status(void)
 {

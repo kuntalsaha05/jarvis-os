@@ -1,40 +1,122 @@
 #include "sync_demo.h"
 #include "semaphore.h"
+#include <stddef.h>
+#include "../process/process.h"
+
+#include "../process/scheduler.h"
 #include "../drivers/terminal.h"
+
+static uint32_t get_current_pid(void)
+{
+    process_t *cur = scheduler_current_process();
+    return (cur != 0 && cur->pid > 0) ? cur->pid : 1;
+}
 
 void mutex_init(mutex_t *mutex)
 {
     if (mutex) {
         mutex->locked = 0;
         mutex->owner_pid = 0;
+        mutex->lock_count = 0;
     }
 }
 
 int mutex_try_lock(mutex_t *mutex)
 {
     if (!mutex) return -1;
-    if (__sync_lock_test_and_set(&mutex->locked, 1) == 0) {
-        mutex->owner_pid = 1;
-        return 0;
+    uint32_t pid = get_current_pid();
+
+    if (mutex->locked && mutex->owner_pid == pid) {
+        return MUTEX_ERR_DEADLOCK;
     }
-    return -1;
+
+    if (__sync_lock_test_and_set(&mutex->locked, 1) == 0) {
+        mutex->owner_pid = pid;
+        mutex->lock_count++;
+        return MUTEX_SUCCESS;
+    }
+    return MUTEX_ERR_BUSY;
 }
 
 int mutex_lock(mutex_t *mutex)
 {
     if (!mutex) return -1;
-    while (__sync_lock_test_and_set(&mutex->locked, 1)) {
-        __asm__ volatile ("pause");
+    uint32_t pid = get_current_pid();
+
+    if (mutex->locked && mutex->owner_pid == pid) {
+        return MUTEX_ERR_DEADLOCK;
     }
-    mutex->owner_pid = 1;
-    return 0;
+
+    while (__sync_lock_test_and_set(&mutex->locked, 1)) {
+        scheduler_yield();
+    }
+
+    mutex->owner_pid = pid;
+    mutex->lock_count++;
+    return MUTEX_SUCCESS;
 }
 
 int mutex_unlock(mutex_t *mutex)
 {
-    if (!mutex || !mutex->locked) return -1;
+    if (!mutex || !mutex->locked) return MUTEX_ERR_NOT_LOCKED;
+    uint32_t pid = get_current_pid();
+
+    /* Strict ownership check: only the holding task can unlock */
+    if (mutex->owner_pid != pid) {
+        return MUTEX_ERR_NOT_OWNER;
+    }
+
     mutex->owner_pid = 0;
     __sync_lock_release(&mutex->locked);
+    return MUTEX_SUCCESS;
+}
+
+int mutex_is_locked(const mutex_t *mutex)
+{
+    return (mutex != 0) ? mutex->locked : 0;
+}
+
+uint32_t mutex_get_owner(const mutex_t *mutex)
+{
+    return (mutex != 0) ? mutex->owner_pid : 0;
+}
+
+int test_mutex_invariants(void)
+{
+    mutex_t m;
+
+    /* 1. NULL check */
+    if (mutex_lock(NULL) != -1) return -1;
+    if (mutex_try_lock(NULL) != -1) return -2;
+    if (mutex_unlock(NULL) != MUTEX_ERR_NOT_LOCKED) return -3;
+
+    /* 2. Initialization invariant */
+    mutex_init(&m);
+    if (mutex_is_locked(&m) != 0 || mutex_get_owner(&m) != 0) return -4;
+
+    /* 3. Unlock on unlocked mutex rejected */
+    if (mutex_unlock(&m) != MUTEX_ERR_NOT_LOCKED) return -5;
+
+    /* 4. Normal lock acquisition */
+    if (mutex_lock(&m) != MUTEX_SUCCESS) return -6;
+    if (mutex_is_locked(&m) != 1) return -7;
+    uint32_t current_pid = get_current_pid();
+    if (mutex_get_owner(&m) != current_pid) return -8;
+
+    /* 5. Recursive re-lock attempt must be rejected to prevent self-deadlock */
+    if (mutex_try_lock(&m) != MUTEX_ERR_DEADLOCK) return -9;
+    if (mutex_lock(&m) != MUTEX_ERR_DEADLOCK) return -10;
+
+    /* 6. Unauthorized unlock: non-owner task attempted unlock must be rejected */
+    m.owner_pid = current_pid + 100; /* Simulate different owner task */
+    if (mutex_unlock(&m) != MUTEX_ERR_NOT_OWNER) return -11;
+    if (mutex_is_locked(&m) != 1) return -12; /* Must remain locked */
+
+    /* 7. Authorized unlock */
+    m.owner_pid = current_pid;
+    if (mutex_unlock(&m) != MUTEX_SUCCESS) return -13;
+    if (mutex_is_locked(&m) != 0 || mutex_get_owner(&m) != 0) return -14;
+
     return 0;
 }
 
@@ -87,8 +169,8 @@ void sync_demo_producer_consumer(void)
     terminal_write("\n1. Producer-Consumer Bounded Buffer Test:\n");
     terminal_write("   Capacity: 4 items, Semaphores: empty=4, full=0, mutex=1\n");
 
-    semaphore_init(&sem_empty, BUFFER_SIZE);
-    semaphore_init(&sem_full, 0);
+    semaphore_init_bounded(&sem_empty, BUFFER_SIZE, BUFFER_SIZE);
+    semaphore_init_bounded(&sem_full, 0, BUFFER_SIZE);
     mutex_init(&buffer_mutex);
     in_idx = out_idx = item_count = 0;
 
@@ -222,6 +304,52 @@ void sync_demo_reader_writer(void)
     }
 }
 
+int test_sync_invariants(void)
+{
+    /* 1. Mutex ownership invariants */
+    if (test_mutex_invariants() != 0) return -1;
+
+    /* 2. Semaphore counting invariants */
+    if (test_semaphore_invariants() != 0) return -2;
+
+    /* 3. Producer-Consumer buffer invariants */
+    semaphore_init_bounded(&sem_empty, BUFFER_SIZE, BUFFER_SIZE);
+    semaphore_init_bounded(&sem_full, 0, BUFFER_SIZE);
+    mutex_init(&buffer_mutex);
+    in_idx = out_idx = item_count = 0;
+
+    for (uint32_t i = 1; i <= BUFFER_SIZE; i++) {
+        if (pc_produce(i * 10) != 0) return -3;
+    }
+    if (pc_produce(99) == 0) return -4; /* Overflow must fail */
+
+    for (uint32_t i = 1; i <= BUFFER_SIZE; i++) {
+        uint32_t val = 0;
+        if (pc_consume(&val) != 0 || val != i * 10) return -5;
+    }
+    uint32_t d = 0;
+    if (pc_consume(&d) == 0) return -6; /* Underflow must fail */
+
+    /* 4. Reader-Writer invariants */
+    mutex_init(&rw_mutex);
+    mutex_init(&count_mutex);
+    read_count = 0;
+    active_writers = 0;
+    max_concurrent_readers = 0;
+    shared_data = 50;
+
+    reader_enter();
+    reader_enter();
+    if (read_count != 2) return -7;
+    if (writer_enter() == 0) return -8; /* Writer locked out */
+    reader_exit();
+    reader_exit();
+    if (writer_enter() != 0) return -9; /* Writer enters */
+    writer_exit();
+
+    return 0;
+}
+
 void sync_run_demo(void)
 {
     terminal_write("\n========================================\n");
@@ -230,5 +358,21 @@ void sync_run_demo(void)
 
     sync_demo_producer_consumer();
     sync_demo_reader_writer();
+
+    terminal_write("\n3. Mutex Ownership & Access Protection:\n");
+    int m_res = test_mutex_invariants();
+    if (m_res == 0) {
+        terminal_write("   Result: PASS (Owner PID tracked; non-owner unlock rejected; recursive lock rejected)\n");
+    } else {
+        terminal_write("   Result: FAIL\n");
+    }
+
+    terminal_write("\n4. Counting Semaphore Invariants:\n");
+    int s_res = test_semaphore_invariants();
+    if (s_res == 0) {
+        terminal_write("   Result: PASS (Atomic counting, bounded limits, underflow/overflow protection)\n");
+    } else {
+        terminal_write("   Result: FAIL\n");
+    }
 }
 
