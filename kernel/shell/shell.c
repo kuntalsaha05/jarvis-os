@@ -20,6 +20,8 @@
 #include "algorithms/file_alloc.h"
 #include "algorithms/disk_sched.h"
 #include "syscall/syscall.h"
+#include "drivers/framebuffer.h"
+#include "gui/desktop.h"
 #include "../debug.h"
 #include <stdint.h>
 
@@ -62,7 +64,8 @@ static void print_help(void)
     terminal_write("  threads    - Show comprehensive thread & scheduler metrics\n");
     terminal_write("  scheduler  - Show current kernel scheduler algorithm\n");
     terminal_write("  memory     - Show page allocator & heap memory usage\n");
-    terminal_write("  pftest     - Test safe page-fault diagnostics & decoder\n\n");
+    terminal_write("  pftest     - Test safe page-fault diagnostics & decoder\n");
+    terminal_write("  gui / desktop - Launch native graphical desktop or check FB\n\n");
 
     terminal_write("File & Storage Operations:\n");
     terminal_write("  ls             - List files in JARVIS-FS directory\n");
@@ -600,6 +603,27 @@ static void execute_command(void)
     else if (cmd_match(command, "ai")) {
         print_ai_status();
     }
+    else if (cmd_match(command, "gui") || cmd_match(command, "desktop")) {
+        const fb_info_t *fb = fb_get_info();
+        if (!fb || !fb->is_valid) {
+            terminal_write("\n[GUI] Error: No hardware framebuffer detected.\n");
+            terminal_write("  Discovery status: ");
+            terminal_write(fb ? fb->method : "Driver uninitialized");
+            terminal_write("\n  VGA text console (0xB8000) preserved as primary display.\n");
+        } else {
+            terminal_write("\n[GUI] Launching Native JARVIS Graphical Desktop...\n");
+            terminal_write("  Resolution: ");
+            terminal_write_number(fb->width);
+            terminal_write("x");
+            terminal_write_number(fb->height);
+            terminal_write("x");
+            terminal_write_number(fb->bpp);
+            terminal_write(" (Method: ");
+            terminal_write(fb->method);
+            terminal_write(")\n");
+            desktop_run();
+        }
+    }
     else if (cmd_match(command, "tests")) {
         run_all_tests();
     }
@@ -608,6 +632,18 @@ static void execute_command(void)
         terminal_write(command);
         terminal_write("'. Type help for available commands.\n");
     }
+}
+
+void shell_execute(const char *cmd_line)
+{
+    if (!cmd_line) return;
+    uint32_t i = 0;
+    while (cmd_line[i] && i + 1 < COMMAND_SIZE) {
+        command[i] = cmd_line[i];
+        i++;
+    }
+    command[i] = '\0';
+    execute_command();
 }
 
 void shell_run(void)

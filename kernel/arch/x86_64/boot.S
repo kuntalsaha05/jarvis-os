@@ -27,17 +27,36 @@ _start:
     or $0x3, %ebx
     mov %ebx, (%eax)
 
-    # PDPT[0] -> Page Directory
-    mov $pdpt_table, %eax
-    mov $pd_table, %ebx
-    or $0x3, %ebx
-    mov %ebx, (%eax)
+    # Initialize 4 Page Directories (2048 entries * 2 MiB = 4 GiB identity-mapped)
+    mov $pd_tables, %edi
+    mov $0x83, %ebx          # Start at physical 0x00000000, Present + Writable + 2MB
+    mov $2048, %ecx
+.Lmap_loop:
+    mov %ebx, (%edi)
+    movl $0, 4(%edi)
+    add $0x200000, %ebx
+    add $8, %edi
+    dec %ecx
+    jnz .Lmap_loop
 
-    # PD[0] -> 2 MiB identity-mapped page
-    # Present + Writable + Huge Page
-    mov $pd_table, %eax
-    mov $0x83, %ebx
-    mov %ebx, (%eax)
+    # Link PDPT entries 0..3 to the 4 Page Directories
+    mov $pdpt_table, %edi
+    mov $pd_tables, %ebx
+    or $0x3, %ebx
+    mov %ebx, 0(%edi)
+    movl $0, 4(%edi)
+
+    add $4096, %ebx
+    mov %ebx, 8(%edi)
+    movl $0, 12(%edi)
+
+    add $4096, %ebx
+    mov %ebx, 16(%edi)
+    movl $0, 20(%edi)
+
+    add $4096, %ebx
+    mov %ebx, 24(%edi)
+    movl $0, 28(%edi)
 
     # Load PML4
     mov $pml4_table, %eax
@@ -119,8 +138,8 @@ pdpt_table:
 
 .align 4096
 
-pd_table:
-.skip 4096
+pd_tables:
+.skip 4096 * 4
 
 .align 4
 .global multiboot_magic

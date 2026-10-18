@@ -13,9 +13,16 @@
 #include "ipc/semaphore.h"
 #include "ipc/sync_demo.h"
 #include "process/process.h"
+#include "process/scheduler.h"
+#include "memory/page.h"
 #include "storage/block.h"
 #include "storage/ramdisk.h"
 #include "storage/fs.h"
+#include "drivers/framebuffer.h"
+#include "drivers/mouse.h"
+#include "gui/font.h"
+#include "gui/graphics.h"
+#include "gui/desktop.h"
 
 /* Provide stubs for terminal functions when running in host unit test mode */
 void terminal_write(const char *str) {
@@ -50,6 +57,17 @@ int process_unblock(uint32_t pid) {
 }
 
 void scheduler_yield(void) {
+}
+
+void debug_puts(const char *s) { (void)s; }
+void pic_send_eoi(uint8_t irq) { (void)irq; }
+char keyboard_read_char(void) { return 0; }
+void shell_execute(const char *cmd) { (void)cmd; }
+void page_get_stats(page_stats_t *s) {
+    if (s) { s->free_pages = 60; s->allocated_pages = 4; s->total_pages = 64; }
+}
+void scheduler_get_stats(scheduler_stats_t *s) {
+    if (s) { s->context_switches = 10; s->quantum_preemptions = 2; s->voluntary_yields = 5; }
 }
 
 
@@ -644,6 +662,25 @@ static void test_file_alloc_and_disk_sched_invariants_host(void)
     printf("PASS\n");
 }
 
+static void test_gui_and_framebuffer_invariants(void)
+{
+    printf("[TEST] Framebuffer & Native GUI Invariants... ");
+
+    /* 1. Framebuffer bounds and clipping invariants */
+    int fb_res = test_framebuffer_invariants();
+    assert(fb_res == 0);
+
+    /* 2. Mouse packet decoding & clamping invariants */
+    int mouse_res = test_mouse_invariants();
+    assert(mouse_res == 0);
+
+    /* 3. Desktop state machine, key navigation, and window cycling */
+    int desk_res = test_desktop_invariants();
+    assert(desk_res == 0);
+
+    printf("PASS\n");
+}
+
 int main(void)
 {
     printf("==================================================\n");
@@ -665,6 +702,7 @@ int main(void)
     test_storage_block_device_invariants_host();
     test_filesystem_invariants_host();
     test_file_alloc_and_disk_sched_invariants_host();
+    test_gui_and_framebuffer_invariants();
 
     printf("==================================================\n");
     printf("   ALL HOST UNIT TESTS COMPLETED SUCCESSFULLY!    \n");

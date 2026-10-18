@@ -40,7 +40,12 @@ OBJECTS = \
 	build/multiboot.o \
 	build/terminal.o \
 	build/keyboard.o \
-	build/shell.o
+	build/shell.o \
+	build/framebuffer.o \
+	build/mouse.o \
+	build/font.o \
+	build/graphics.o \
+	build/desktop.o
 
 .PHONY: all clean iso run run-headless test test-ai test-all
 
@@ -139,6 +144,21 @@ build/debug.o: kernel/drivers/debug.c | build
 build/multiboot.o: kernel/memory/multiboot.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
+build/framebuffer.o: kernel/drivers/framebuffer.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/mouse.o: kernel/drivers/mouse.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/font.o: kernel/gui/font.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/graphics.o: kernel/gui/graphics.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/desktop.o: kernel/gui/desktop.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
 $(KERNEL): $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
@@ -158,7 +178,7 @@ run-headless: $(ISO)
 
 test:
 	mkdir -p build
-	gcc -O2 -Wall -Wextra -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c -o build/host_tests
+	gcc -O2 -Wall -Wextra -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/desktop.c -o build/host_tests
 	./build/host_tests
 
 
@@ -168,10 +188,13 @@ test-ai:
 test-qemu: $(ISO)
 	python3 scripts/qemu_smoke_test.py
 
+test-gui: $(ISO)
+	python3 scripts/qemu_gui_test.py
+
 test-release: $(ISO)
 	python3 scripts/validate_release_workflow.py
 
-test-all: test test-ai test-qemu test-release
+test-all: test test-ai test-qemu test-gui test-release
 
 clean:
 	rm -rf build

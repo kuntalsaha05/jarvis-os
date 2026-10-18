@@ -11,3 +11,5 @@ logs/
 *.log
 preemption-*.txt
 prepare-preemption.sh
+*.ppm
+*.png

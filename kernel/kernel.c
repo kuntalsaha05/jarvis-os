@@ -20,6 +20,9 @@
 #include "storage/fs.h"
 #include "memory/page.h"
 #include "memory/multiboot.h"
+#include "drivers/framebuffer.h"
+#include "drivers/mouse.h"
+#include "gui/desktop.h"
 #include "debug.h"
 
 extern volatile uint64_t timer_ticks;
@@ -238,6 +241,23 @@ void kernel_main(uint64_t magic, uint64_t mb_info_addr)
     terminal_initialize();
     multiboot_dump_memory_map(magic, mb_info_addr);
 
+    fb_init(magic, mb_info_addr);
+    const fb_info_t *fb = fb_get_info();
+    terminal_write("Framebuffer status: ");
+    if (fb && fb->is_valid) {
+        terminal_write("PASS (");
+        terminal_write_number(fb->width);
+        terminal_write("x");
+        terminal_write_number(fb->height);
+        terminal_write("x");
+        terminal_write_number(fb->bpp);
+        terminal_write(" via ");
+        terminal_write(fb->method);
+        terminal_write(")\n");
+    } else {
+        terminal_write("FALLBACK (VGA text console active)\n");
+    }
+
     heap_init();
     test_page_allocator();
 
@@ -388,6 +408,7 @@ void kernel_main(uint64_t magic, uint64_t mb_info_addr)
     __asm__ volatile ("sti");
 
     keyboard_init();
+    mouse_init();
     shell_run();
 
     while (1)

@@ -71,20 +71,20 @@ rm -f build_demo.log
 # ------------------------------------------------------------------------------
 # 3. Host C Algorithm Tests
 # ------------------------------------------------------------------------------
-echo -e "${YELLOW}[3/6] Running 15 Host C Algorithm Unit Test Suites...${NC}"
+echo -e "${YELLOW}[3/7] Running 16 Host C Algorithm & GUI Unit Test Suites...${NC}"
 if ! make test > host_tests_demo.log 2>&1; then
     echo -e "${RED}[ERROR] Host unit tests failed!${NC}"
     cat host_tests_demo.log
     rm -f host_tests_demo.log
     exit 1
 fi
-echo -e "${GREEN}  All 15 Host C algorithm suites passed successfully.${NC}"
+echo -e "${GREEN}  All 16 Host C algorithm & GUI suites passed successfully.${NC}"
 rm -f host_tests_demo.log
 
 # ------------------------------------------------------------------------------
 # 4. Python AI Companion Tests
 # ------------------------------------------------------------------------------
-echo -e "${YELLOW}[4/6] Running 18 Python AI Companion & Agent Unit Tests...${NC}"
+echo -e "${YELLOW}[4/7] Running 18 Python AI Companion & Agent Unit Tests...${NC}"
 if ! make test-ai > ai_tests_demo.log 2>&1; then
     echo -e "${RED}[ERROR] AI companion unit tests failed!${NC}"
     cat ai_tests_demo.log
@@ -97,7 +97,7 @@ rm -f ai_tests_demo.log
 # ------------------------------------------------------------------------------
 # 5. QEMU Bare-Metal Verification (Bounded Runtime)
 # ------------------------------------------------------------------------------
-echo -e "${YELLOW}[5/6] Booting QEMU with Bounded Runtime & Capturing Serial Output...${NC}"
+echo -e "${YELLOW}[5/7] Booting QEMU with Bounded Runtime & Capturing Serial Output...${NC}"
 if ! make test-qemu > qemu_demo.log 2>&1; then
     echo -e "${RED}[ERROR] QEMU bare-metal verification failed!${NC}"
     cat qemu_demo.log
@@ -108,7 +108,20 @@ echo -e "${GREEN}  All 65 QEMU bare-metal checkpoints passed in ~12 seconds.${NC
 rm -f qemu_demo.log
 
 # ------------------------------------------------------------------------------
-# 6. Interactive Mode vs Automated 13-Step Release Validation
+# 6. QEMU Native GUI Visual Smoke Test (Screendumps & Input Navigation)
+# ------------------------------------------------------------------------------
+echo -e "${YELLOW}[6/7] Running Native Graphical Desktop Visual Smoke Test...${NC}"
+if ! make test-gui > gui_demo.log 2>&1; then
+    echo -e "${RED}[ERROR] GUI visual smoke test failed!${NC}"
+    cat gui_demo.log
+    rm -f gui_demo.log
+    exit 1
+fi
+echo -e "${GREEN}  All 3 Native GUI window screendumps and input navigation passed.${NC}"
+rm -f gui_demo.log
+
+# ------------------------------------------------------------------------------
+# 7. Interactive Mode vs Automated 13-Step Release Validation
 # ------------------------------------------------------------------------------
 if [ "$1" == "--interactive" ] || [ "$1" == "-i" ]; then
     echo -e "${BLUE}==================================================${NC}"
@@ -124,11 +137,12 @@ if [ "$1" == "--interactive" ] || [ "$1" == "-i" ]; then
     echo "  7. touch / write / cat / trunc / rm - Test filesystem operations"
     echo "  8. sched / paging / deadlock / disk - Run algorithm benchmarks"
     echo "  9. ai           - Display AI assistant protocol and security model"
+    echo " 10. gui          - Launch native dark graphical desktop"
     echo "Press Ctrl+A, X to exit QEMU."
     echo ""
     make run-headless
 else
-    echo -e "${YELLOW}[6/6] Executing Complete 13-Step Automated Release Validation...${NC}"
+    echo -e "${YELLOW}[7/7] Executing Complete 13-Step Automated Release Validation...${NC}"
     if ! python3 scripts/validate_release_workflow.py; then
         echo -e "${RED}[ERROR] Release workflow validation failed!${NC}"
         exit 1

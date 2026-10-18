@@ -91,6 +91,19 @@ keyboard_stub:
     RESTORE_REGISTERS
     iretq
 
+.global mouse_stub
+.extern mouse_handler
+
+mouse_stub:
+    cld
+    SAVE_REGISTERS
+    movq %rsp, %r12
+    andq $-16, %rsp
+    call mouse_handler
+    movq %r12, %rsp
+    RESTORE_REGISTERS
+    iretq
+
 .global syscall_stub
 .extern syscall_dispatch
 

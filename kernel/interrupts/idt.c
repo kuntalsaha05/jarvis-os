@@ -11,6 +11,7 @@ extern void schedule_stub(void);
 extern void generic_exception_stub(void);
 extern void syscall_stub(void);
 extern void keyboard_stub(void);
+extern void mouse_stub(void);
 
 void interrupt_handler(void)
 {
@@ -209,6 +210,13 @@ void idt_init(void)
     idt_set_gate(
         33,
         (uint64_t)keyboard_stub,
+        0x08,
+        0x8E
+    );
+
+    idt_set_gate(
+        44,
+        (uint64_t)mouse_stub,
         0x08,
         0x8E
     );

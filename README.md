@@ -102,13 +102,16 @@ make test-ai
 # Run automated QEMU boot and shell verification
 make test-qemu
 
+# Run QEMU native graphical desktop visual smoke test
+make test-gui
+
 # Run 13-step automated release and integration workflow
 make test-release
 
 # Run all test suites
 make test-all
 
-# Run unified end-to-end demo script (Phase 8 verification & boot)
+# Run unified end-to-end demo script (Phase 8-10 verification & boot)
 ./scripts/demo.sh
 
 # Run interactive QEMU shell demo via script
@@ -134,6 +137,7 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 | `scheduler` | Display Round-Robin quantum and scheduler statistics |
 | `memory` | Display physical page allocator statistics and available frames |
 | `pftest` | Test safe page-fault diagnostics and address decoding without crashing |
+| `gui` / `desktop` | Launch native dark graphical desktop with terminal, monitor & AI chat |
 | `sched` | Run CPU Scheduling Benchmark (FCFS, SJF, Round Robin) |
 | `paging` | Run Page Replacement Benchmark and Belady's Anomaly demo |
 | `fit` | Run Memory Allocation Fit demo (First, Best, Worst Fit & fragmentation) |
@@ -172,6 +176,7 @@ Detailed technical architecture, reports, and design docs are available in `docs
 - [`docs/PRESENTATION_OUTLINE.md`](docs/PRESENTATION_OUTLINE.md): Engineering defense and presentation slide outline with anticipated Q&A.
 
 ### Phase Verification Reports
+- [`docs/PHASE10_GUI.md`](docs/PHASE10_GUI.md): Phase 10 native graphical desktop specification, visual tests, and architecture report.
 - [`docs/FEATURE_TRACEABILITY.md`](docs/FEATURE_TRACEABILITY.md): 54-point complete feature requirement traceability matrix.
 - [`docs/SETUP_AND_BUILD.md`](docs/SETUP_AND_BUILD.md): Step-by-step setup, toolchain requirements, build, and run guide.
 - [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md): Pre-release checklist, security audit findings, and remaining boundaries.
