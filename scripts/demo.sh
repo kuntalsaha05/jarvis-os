@@ -26,7 +26,7 @@ echo ""
 # ------------------------------------------------------------------------------
 # 1. Dependency & Toolchain Check
 # ------------------------------------------------------------------------------
-echo -e "${YELLOW}[1/6] Checking Required Dependencies & Toolchains...${NC}"
+echo -e "${YELLOW}[1/7] Checking Required Dependencies & Toolchains...${NC}"
 REQUIRED_TOOLS=("gcc" "make" "python3" "qemu-system-x86_64" "xorriso" "grub-mkrescue")
 MISSING_TOOLS=()
 
@@ -47,7 +47,7 @@ echo -e "${GREEN}  All core tools detected.${NC}"
 # ------------------------------------------------------------------------------
 # 2. Build Kernel Binary & Bootable ISO
 # ------------------------------------------------------------------------------
-echo -e "${YELLOW}[2/6] Building Clean Kernel Binary & Bootable ISO...${NC}"
+echo -e "${YELLOW}[2/7] Building Clean Kernel Binary & Bootable ISO...${NC}"
 make clean >/dev/null 2>&1
 if ! make > build_demo.log 2>&1; then
     echo -e "${RED}[ERROR] Kernel build failed! See build_demo.log${NC}"
@@ -71,27 +71,27 @@ rm -f build_demo.log
 # ------------------------------------------------------------------------------
 # 3. Host C Algorithm Tests
 # ------------------------------------------------------------------------------
-echo -e "${YELLOW}[3/7] Running 16 Host C Algorithm & GUI Unit Test Suites...${NC}"
+echo -e "${YELLOW}[3/7] Running 17 Host C Algorithm & GUI Unit Test Suites...${NC}"
 if ! make test > host_tests_demo.log 2>&1; then
     echo -e "${RED}[ERROR] Host unit tests failed!${NC}"
     cat host_tests_demo.log
     rm -f host_tests_demo.log
     exit 1
 fi
-echo -e "${GREEN}  All 16 Host C algorithm & GUI suites passed successfully.${NC}"
+echo -e "${GREEN}  All 17 Host C algorithm & GUI suites passed successfully.${NC}"
 rm -f host_tests_demo.log
 
 # ------------------------------------------------------------------------------
 # 4. Python AI Companion Tests
 # ------------------------------------------------------------------------------
-echo -e "${YELLOW}[4/7] Running 18 Python AI Companion & Agent Unit Tests...${NC}"
+echo -e "${YELLOW}[4/7] Running 22 Python AI Companion & Agent Unit Tests...${NC}"
 if ! make test-ai > ai_tests_demo.log 2>&1; then
     echo -e "${RED}[ERROR] AI companion unit tests failed!${NC}"
     cat ai_tests_demo.log
     rm -f ai_tests_demo.log
     exit 1
 fi
-echo -e "${GREEN}  All 18 AI unit tests passed successfully.${NC}"
+echo -e "${GREEN}  All 22 AI unit tests passed successfully.${NC}"
 rm -f ai_tests_demo.log
 
 # ------------------------------------------------------------------------------
