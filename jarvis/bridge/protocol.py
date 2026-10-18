@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional
 from dataclasses import dataclass, asdict
 
 PROTOCOL_VERSION = "1.0"
+MAX_MESSAGE_SIZE = 65536  # 64 KB maximum payload limit
 
 
 @dataclass
@@ -28,6 +29,8 @@ class BridgeRequest:
     def from_json(cls, json_str: str) -> "BridgeRequest":
         if not json_str or not isinstance(json_str, str):
             raise ValueError("Input must be a non-empty JSON string")
+        if len(json_str) > MAX_MESSAGE_SIZE:
+            raise ValueError(f"Message size {len(json_str)} exceeds MAX_MESSAGE_SIZE ({MAX_MESSAGE_SIZE} bytes)")
 
         data = json.loads(json_str)
         if not isinstance(data, dict):
@@ -63,6 +66,8 @@ class BridgeResponse:
     def from_json(cls, json_str: str) -> "BridgeResponse":
         if not json_str or not isinstance(json_str, str):
             raise ValueError("Input must be a non-empty JSON string")
+        if len(json_str) > MAX_MESSAGE_SIZE:
+            raise ValueError(f"Message size {len(json_str)} exceeds MAX_MESSAGE_SIZE ({MAX_MESSAGE_SIZE} bytes)")
 
         data = json.loads(json_str)
         if not isinstance(data, dict):

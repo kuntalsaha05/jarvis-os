@@ -133,9 +133,11 @@ syscall_stub:
 generic_exception_stub:
     cld
     SAVE_REGISTERS
+    movq %rsp, %r12
     movq %rsp, %rdi
     andq $-16, %rsp
     call generic_exception_handler
+    movq %r12, %rsp
     RESTORE_REGISTERS
     iretq
 

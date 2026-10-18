@@ -163,6 +163,11 @@ int wm_destroy_window(int id)
     win->is_active_slot = 0;
     win->is_visible = 0;
     win->is_focused = 0;
+    win->render_content = NULL;
+    win->handle_key = NULL;
+    win->handle_click = NULL;
+    win->user_data = NULL;
+    win->title[0] = '\0';
     g_wm.window_count--;
 
     /* Rebalance z-orders */

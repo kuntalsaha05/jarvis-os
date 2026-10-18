@@ -15,6 +15,7 @@
 #include "process/process.h"
 #include "process/scheduler.h"
 #include "memory/page.h"
+#include "memory/heap.h"
 #include "storage/block.h"
 #include "storage/ramdisk.h"
 #include "storage/fs.h"
@@ -704,6 +705,139 @@ static void test_gui_and_framebuffer_invariants(void)
     printf("PASS\n");
 }
 
+/* ========================================================
+ * 17. Phase 13: Stress, Stability & Resource Safety Tests
+ * ======================================================== */
+static void test_stress_and_stability_invariants(void)
+{
+    printf("[TEST] Stress Testing, Stability & Boundary Safety Invariants... ");
+
+    /* 1. Dynamic Heap: 16-byte alignment, splitting, coalescing & churn */
+    heap_init();
+    void *blocks[64];
+    for (int i = 0; i < 64; i++) {
+        size_t sz = 16 * ((i % 8) + 1);
+        blocks[i] = kmalloc(sz);
+        assert(blocks[i] != NULL);
+        assert(((uintptr_t)blocks[i] % 16) == 0); /* 16-byte System V ABI alignment */
+        /* Fill with deterministic pattern */
+        uint8_t *b = (uint8_t *)blocks[i];
+        for (size_t k = 0; k < sz; k++) {
+            b[k] = (uint8_t)(i + k);
+        }
+    }
+    /* Verify pattern integrity */
+    for (int i = 0; i < 64; i++) {
+        size_t sz = 16 * ((i % 8) + 1);
+        uint8_t *b = (uint8_t *)blocks[i];
+        for (size_t k = 0; k < sz; k++) {
+            assert(b[k] == (uint8_t)(i + k));
+        }
+    }
+    /* Free odd blocks first (fragmentation simulation) */
+    for (int i = 1; i < 64; i += 2) {
+        kfree(blocks[i]);
+    }
+    /* Free even blocks (coalescing) */
+    for (int i = 0; i < 64; i += 2) {
+        kfree(blocks[i]);
+    }
+    /* After full free, allocate large block to verify 100% coalescing */
+    void *large = kmalloc(40000);
+    assert(large != NULL);
+    assert(((uintptr_t)large % 16) == 0);
+    kfree(large);
+
+    /* 2. Process Transition Stress: 10,000 randomized state queries */
+    for (int i = 0; i < 10000; i++) {
+        int from = i % 5;
+        int to = (i * 3 + 1) % 5;
+        int valid = test_process_is_valid_transition(from, to);
+        assert(valid == 0 || valid == 1);
+    }
+
+    /* 3. Filesystem Capacity Boundary & Rollback Stress */
+    ramdisk_init();
+    assert(fs_format() == FS_OK);
+    assert(fs_create("boundary.bin") == FS_OK);
+    int fd = fs_open("boundary.bin");
+    assert(fd >= 0);
+
+    /* Fill file up to FS_MAX_FILE_SIZE (4096 bytes = 8 direct blocks) */
+    uint8_t chunk[512];
+    for (int i = 0; i < 512; i++) chunk[i] = 0xAA;
+    for (int i = 0; i < 8; i++) {
+        int w = fs_write(fd, chunk, 512);
+        assert(w == 512);
+    }
+    /* Writing beyond FS_MAX_FILE_SIZE must fail with FS_ERR_FILE_TOO_LARGE */
+    assert(fs_write(fd, chunk, 1) == FS_ERR_FILE_TOO_LARGE);
+
+    /* Truncate file back to 1024 bytes and verify blocks are freed */
+    assert(fs_truncate(fd, 1024) == FS_OK);
+    assert(fs_close(fd) == FS_OK);
+
+    fs_stat_t st;
+    assert(fs_stat("boundary.bin", &st) == FS_OK);
+    assert(st.size == 1024);
+    assert(st.blocks_allocated == 2);
+
+    /* 4. Window Manager Churn Stress: 200 cycles of create, reorder, destroy */
+    wm_init(1024, 768);
+    for (int cycle = 0; cycle < 200; cycle++) {
+        int wids[WM_MAX_WINDOWS];
+        for (int w = 0; w < WM_MAX_WINDOWS; w++) {
+            window_t *win = wm_create_window("StressWin", 50 + w * 10, 50 + w * 10, 200, 150, WINDOW_TYPE_CUSTOM);
+            assert(win != NULL);
+            wids[w] = win->id;
+        }
+        /* 9th window must fail gracefully */
+        assert(wm_create_window("OverflowWin", 0, 0, 100, 100, WINDOW_TYPE_CUSTOM) == NULL);
+
+        /* Bring middle window to front */
+        wm_bring_to_front(wids[3]);
+        assert(wm_get_by_id(wids[3])->z_order == WM_MAX_WINDOWS - 1);
+
+        /* Destroy all windows in reverse order */
+        for (int w = WM_MAX_WINDOWS - 1; w >= 0; w--) {
+            assert(wm_destroy_window(wids[w]) == 0);
+        }
+    }
+
+    /* 5. Event Queue Burst Stress: 1,000 pushes into 64-event circular buffer */
+    event_queue_init();
+    for (int i = 0; i < 1000; i++) {
+        gui_event_t ev = { .type = EVENT_MOUSE_MOVE, .x = i, .y = i * 2 };
+        event_queue_push(&ev);
+    }
+    assert(event_queue_count() == GUI_EVENT_QUEUE_SIZE);
+    assert(event_queue_dropped() == 1000 - GUI_EVENT_QUEUE_SIZE);
+    /* Pop remaining events and verify integrity */
+    for (int i = 0; i < GUI_EVENT_QUEUE_SIZE; i++) {
+        gui_event_t out;
+        assert(event_queue_pop(&out) == 0);
+        assert(out.type == EVENT_MOUSE_MOVE);
+    }
+    assert(event_queue_count() == 0);
+
+    /* 6. Desktop Configuration Bit-Flip Recovery Stress */
+    desktop_config_t cfg;
+    config_init_defaults(&cfg);
+    assert(config_validate(&cfg) == 0);
+    /* Corrupt magic */
+    cfg.magic = 0xDEADBEEF;
+    assert(config_validate(&cfg) == -2);
+    /* Restore magic, corrupt checksum */
+    cfg.magic = CONFIG_MAGIC;
+    cfg.checksum ^= 0x55555555;
+    assert(config_validate(&cfg) == -9);
+    /* Reset to defaults */
+    config_reset_defaults(&cfg);
+    assert(config_validate(&cfg) == 0);
+
+    printf("PASS\n");
+}
+
 int main(void)
 {
     printf("==================================================\n");
@@ -726,6 +860,7 @@ int main(void)
     test_filesystem_invariants_host();
     test_file_alloc_and_disk_sched_invariants_host();
     test_gui_and_framebuffer_invariants();
+    test_stress_and_stability_invariants();
 
     printf("==================================================\n");
     printf("   ALL HOST UNIT TESTS COMPLETED SUCCESSFULLY!    \n");

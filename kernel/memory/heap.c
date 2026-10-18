@@ -8,8 +8,9 @@ typedef struct heap_block
 {
     size_t size;
     int free;
+    int padding;
     struct heap_block *next;
-} heap_block_t;
+} __attribute__((aligned(16))) heap_block_t;
 
 static uint8_t kernel_heap[KERNEL_HEAP_SIZE]
     __attribute__((aligned(16)));

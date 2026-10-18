@@ -246,6 +246,43 @@ class TestAICompanion(unittest.TestCase):
         self.assertEqual(resp.request_id, 99)
         self.assertEqual(resp.status, "SUCCESS")
 
+    def test_message_size_limit_rejection(self):
+        # 1. Normal payload passes
+        normal_req = BridgeRequest(request_id=1, action="test", arguments={"data": "hello"}).to_json()
+        self.assertEqual(BridgeRequest.from_json(normal_req).request_id, 1)
+
+        # 2. Oversized payload (>64KB) must be rejected
+        huge_data = "X" * 70000
+        oversized_json = f'{{"request_id": 2, "action": "test", "arguments": {{"data": "{huge_data}"}}}}'
+        with self.assertRaises(ValueError) as ctx:
+            BridgeRequest.from_json(oversized_json)
+        self.assertIn("exceeds MAX_MESSAGE_SIZE", str(ctx.exception))
+
+        oversized_resp = f'{{"request_id": 2, "status": "SUCCESS", "result": "{huge_data}"}}'
+        with self.assertRaises(ValueError) as ctx2:
+            BridgeResponse.from_json(oversized_resp)
+        self.assertIn("exceeds MAX_MESSAGE_SIZE", str(ctx2.exception))
+
+    def test_malformed_protocol_payloads(self):
+        with self.assertRaises(ValueError):
+            BridgeRequest.from_json("")
+        with self.assertRaises(ValueError):
+            BridgeRequest.from_json("not json")
+        with self.assertRaises(ValueError):
+            BridgeRequest.from_json("[]")
+        with self.assertRaises(ValueError):
+            BridgeRequest.from_json('{"action": "test"}')  # missing request_id
+
+    def test_ai_repeated_stress_requests(self):
+        from jarvis.agent.agent import JarvisAgent
+        agent = JarvisAgent(self.llm_manager, self.registry)
+        for i in range(100):
+            res = agent.run_cycle("query kernel status")
+            self.assertEqual(res["tool_selected"], "kernel.query_status")
+            self.assertEqual(res["tool_result"]["status"], "ONLINE")
+            self.assertEqual(res["telemetry_source"], "OFFLINE_SIMULATION")
+        self.assertGreaterEqual(len(self.registry.audit_log), 100)
+
 
 if __name__ == "__main__":
     unittest.main()

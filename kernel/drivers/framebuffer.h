@@ -31,6 +31,7 @@ typedef struct {
 } fb_info_t;
 
 void fb_init(uint64_t magic, uint64_t mb_info_addr);
+void fb_init_mock(uint32_t *buffer, uint32_t width, uint32_t height);
 const fb_info_t *fb_get_info(void);
 int fb_is_available(void);
 

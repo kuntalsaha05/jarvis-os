@@ -190,6 +190,19 @@ void fb_init(uint64_t magic, uint64_t mb_info_addr)
     debug_puts("[FB] No hardware framebuffer discovered. Text console preserved.\n");
 }
 
+void fb_init_mock(uint32_t *buffer, uint32_t width, uint32_t height)
+{
+    fb_state.phys_addr = (uint64_t)(uintptr_t)buffer;
+    fb_state.buffer = buffer;
+    fb_state.width = width;
+    fb_state.height = height;
+    fb_state.pitch = width * 4;
+    fb_state.bpp = 32;
+    fb_state.type = 1;
+    fb_state.is_valid = (buffer != NULL && width > 0 && height > 0) ? 1 : 0;
+    str_copy(fb_state.method, "Mock Test Framebuffer", sizeof(fb_state.method));
+}
+
 const fb_info_t *fb_get_info(void)
 {
     return &fb_state;

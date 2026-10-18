@@ -51,7 +51,7 @@ OBJECTS = \
 	build/app.o \
 	build/desktop.o
 
-.PHONY: all clean iso run run-headless test test-ai test-all
+.PHONY: all clean iso run run-headless test test-ai test-all bench bench-full
 
 all: $(KERNEL)
 
@@ -194,7 +194,7 @@ run-headless: $(ISO)
 
 test:
 	mkdir -p build
-	gcc -O2 -Wall -Wextra -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/event.c kernel/gui/wm.c kernel/gui/config.c kernel/gui/app.c kernel/gui/desktop.c -o build/host_tests
+	gcc -O2 -Wall -Wextra -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/memory/heap.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/event.c kernel/gui/wm.c kernel/gui/config.c kernel/gui/app.c kernel/gui/desktop.c -o build/host_tests
 	./build/host_tests
 
 
@@ -210,7 +210,15 @@ test-gui: $(ISO)
 test-release: $(ISO)
 	python3 scripts/validate_release_workflow.py
 
-test-all: test test-ai test-qemu test-gui test-release
+test-all: test test-ai test-qemu test-gui test-release bench
+
+bench:
+	mkdir -p build
+	gcc -O2 -Wall -Wextra -Ikernel tests/perf_bench.c kernel/memory/heap.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/wm.c kernel/gui/event.c -o build/perf_bench
+	./build/perf_bench
+
+bench-full: $(ISO) bench
+	python3 scripts/benchmark_phase13.py
 
 clean:
 	rm -rf build

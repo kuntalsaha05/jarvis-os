@@ -187,6 +187,7 @@ Detailed technical architecture, reports, and design docs are available in `docs
 - [`docs/PRESENTATION_OUTLINE.md`](docs/PRESENTATION_OUTLINE.md): Engineering defense and presentation slide outline with anticipated Q&A.
 
 ### Phase Verification Reports
+- [`docs/PHASE13_STABILITY_REPORT.md`](docs/PHASE13_STABILITY_REPORT.md): Phase 13 security audit, stability hardening, stress testing, and performance baselines report.
 - [`docs/PHASE12_APP_FRAMEWORK.md`](docs/PHASE12_APP_FRAMEWORK.md): Phase 12 application framework, desktop configuration, themes, and persistence report.
 - [`docs/PHASE11_GUI_VERIFICATION.md`](docs/PHASE11_GUI_VERIFICATION.md): Phase 11 window manager, event queue, dragging, and desktop application suite report.
 - [`docs/PHASE10_GUI.md`](docs/PHASE10_GUI.md): Phase 10 native graphical desktop specification, visual tests, and architecture report.
