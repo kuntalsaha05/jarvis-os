@@ -179,6 +179,13 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 
 Detailed technical architecture, reports, and design docs are available in `docs/`:
 
+### Release Candidate Deliverables (v1.0.0-RC1)
+- [`docs/RELEASE_NOTES.md`](docs/RELEASE_NOTES.md): Official Release Notes for v1.0.0-RC1, ISO checksums, toolchain matrix, and subsystem summaries.
+- [`docs/DEMO_GUIDE.md`](docs/DEMO_GUIDE.md): End-to-end demonstration guide with step-by-step reproduction instructions for all OS capabilities.
+- [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md): Transparent catalog of architectural limitations, RAMDisk volatility, and security boundaries.
+- [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md): 30-point pre-release verification checklist, security audit findings, and verification matrix.
+- [`docs/FEATURE_TRACEABILITY.md`](docs/FEATURE_TRACEABILITY.md): 66-point complete feature requirement traceability matrix (100% verified complete).
+
 ### Final Project Reports & Submission Deliverables
 - [`docs/FINAL_ACCEPTANCE_REPORT.md`](docs/FINAL_ACCEPTANCE_REPORT.md): Phase 9 independent correctness audit, test reproduction, and final acceptance verdict.
 - [`docs/FINAL_PROJECT_REPORT.md`](docs/FINAL_PROJECT_REPORT.md): Comprehensive final project technical report covering all 14 project sections (Abstract through References).
@@ -191,9 +198,7 @@ Detailed technical architecture, reports, and design docs are available in `docs
 - [`docs/PHASE12_APP_FRAMEWORK.md`](docs/PHASE12_APP_FRAMEWORK.md): Phase 12 application framework, desktop configuration, themes, and persistence report.
 - [`docs/PHASE11_GUI_VERIFICATION.md`](docs/PHASE11_GUI_VERIFICATION.md): Phase 11 window manager, event queue, dragging, and desktop application suite report.
 - [`docs/PHASE10_GUI.md`](docs/PHASE10_GUI.md): Phase 10 native graphical desktop specification, visual tests, and architecture report.
-- [`docs/FEATURE_TRACEABILITY.md`](docs/FEATURE_TRACEABILITY.md): 54-point complete feature requirement traceability matrix.
 - [`docs/SETUP_AND_BUILD.md`](docs/SETUP_AND_BUILD.md): Step-by-step setup, toolchain requirements, build, and run guide.
-- [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md): Pre-release checklist, security audit findings, and remaining boundaries.
 - [`docs/PHASE7_VERIFICATION.md`](docs/PHASE7_VERIFICATION.md): Phase 7 integration and release validation report.
 - [`docs/PHASE6_VERIFICATION.md`](docs/PHASE6_VERIFICATION.md): Phase 6 AI integration and local intelligence verification report.
 - [`docs/PHASE5_VERIFICATION.md`](docs/PHASE5_VERIFICATION.md): Phase 5 storage and filesystem reliability verification report.

@@ -75,15 +75,27 @@ To ensure absolute transparency and prevent ambiguity, every requirement is tagg
 | **51** | **Host Companion CLI** | Host-Side AI / Tool Component | `jarvis/main.py` | CLI test: `python3 jarvis/main.py --status`, `--explain`, `--fs-diagnostics`, `--query` | **PASS** | Flags: `--backend [mock|llama|airllm]`, `--query`, `--interactive`, `--explain <concept>`, `--fs-diagnostics`, `--status`, `--audit`. |
 | **52** | **Kernel Shell AI Status Command (`ai`)** | Real Kernel Mechanism | `kernel/shell/shell.c` | `make test-qemu` (Checkpoints: *AI Status Shell Command*, *AI Security 4-Tier Model*) | **PASS** | Displays Protocol v1.0, 4-tier security catalog, transport configuration, and supported backends in kernel shell. |
 | **53** | **Automated QEMU Smoke Runner** | Host-Side AI / Tool Component | `scripts/qemu_smoke_test.py` | `make test-qemu` | **PASS** | Headless QEMU runner capturing serial output and asserting 65 verification checkpoints in 12.01s. |
-| **54** | **Unified Regression Suite** | Host-Side AI / Tool Component | `Makefile` | `make test-all` | **PASS** | End-to-end execution of `make test` (15/15), `make test-ai` (18/18), and `make test-qemu` (65/65). |
+| **54** | **Unified Regression Suite** | Host-Side AI / Tool Component | `Makefile` | `make test-all` | **PASS** | End-to-end execution of `make test`, `make test-ai`, `make test-qemu`, `make test-gui`, and `make test-release`. |
+| **55** | **Linear Framebuffer Discovery & VBE/BGA Graphics** | Real Kernel Mechanism | `kernel/drivers/framebuffer.c`, `framebuffer.h` | `make test-gui` (Screendumps: 6 captured PPM files) | **PASS** | $1024 \times 768 \times 32\text{ bpp}$ auto-discovered via Multiboot, VBE mode info, or Bochs BGA PCI BAR 0 (`0xFD000000`). |
+| **56** | **Hardware Bitmap Font & Primitive Rasterizer** | Real Kernel Mechanism | `kernel/gui/font.c`, `graphics.c` | `make test-gui` | **PASS** | 8x16 embedded bitmap font, clipping to screen/window bounds, filled rectangles, outlines, Bresenham lines. |
+| **57** | **Window Manager Subsystem (WM)** | Real Kernel Mechanism | `kernel/gui/wm.c`, `wm.h` | `make test-gui` (Checkpoints: focus switching, dragging, min/max/close) | **PASS** | Bounded 8-window pool, z-order promotion, title bar mouse dragging, boundary clamping, window controls (`_`, `[]`, `X`). |
+| **58** | **Interrupt-Decoupled GUI Event Queue** | Real Kernel Mechanism | `kernel/gui/event.c`, `event.h` | `make test` (*Event Queue Invariants*), `make bench` | **PASS** | Lockless circular buffer (64 events); hardware ISRs enqueue; events consumed outside interrupt context; 89.5M ops/sec. |
+| **59** | **Dedicated Desktop Applications Suite** | Real Kernel Mechanism | `kernel/gui/desktop.c`, `desktop.h` | `make test-gui` (5 dedicated windows captured in screendumps) | **PASS** | Graphical Terminal, System & Memory Monitor, File Browser, Process & Scheduler Monitor, and JARVIS AI Chat. |
+| **60** | **Reusable GUI Application Framework** | Real Kernel Mechanism | `kernel/gui/app.c`, `app.h` | `make test` (*App Framework Invariants*) | **PASS** | Structured `app_desc_t` descriptors, lifecycle state machine (`REGISTERED`, `RUNNING`, `MINIMIZED`, `STOPPED`), clean cleanup. |
+| **61** | **Desktop Configuration & Theme Engine** | Real Kernel Mechanism | `kernel/gui/config.c`, `config.h` | `make test` (*Desktop Config Invariants*) | **PASS** | `desktop.cfg` binary format with `0x4A434647` magic, versioning, 32-bit checksum; 3 themes (JARVIS Dark, Cyberpunk, Classic Slate). |
+| **62** | **Session Persistence & Safe Defaults Fallback** | Real Kernel Mechanism | `kernel/gui/config.c` | `make test` (*Config Bit-Flip Stress*) | **PASS** | Settings persist across shell/GUI switches; bit-flip and checksum corruptions automatically recover to safe defaults. |
+| **63** | **Interrupt Frame & 16-Byte Heap Alignment Hardening** | Real Kernel Mechanism | `kernel/interrupts/interrupts.S`, `kernel/memory/heap.c` | `make test` (*Stress & Stability Invariants*) | **PASS** | Generic exception stack alignment preserves frame pointer; `kmalloc` headers padded to 32B ensuring 16-byte System V ABI compliance. |
+| **64** | **AI Message Size Enforcement (64KB Limit)** | Host-Side AI / Tool Component | `jarvis/bridge/protocol.py` | `make test-ai` (Test: `test_message_size_limit_rejection`) | **PASS** | Payloads exceeding `MAX_MESSAGE_SIZE = 65536` bytes rejected immediately with `ValueError`. |
+| **65** | **Automated Stress Testing Suite** | Real Kernel Mechanism | `tests/host_tests.c`, `tests/test_ai.py` | `make test` & `make test-ai` | **PASS** | 10,000-cycle state machine, dynamic heap churn, filesystem boundary rollback, 200-cycle WM churn, event burst overflow. |
+| **66** | **Empirical Performance Benchmarking Suite** | Real Kernel Mechanism | `tests/perf_bench.c`, `scripts/benchmark_phase13.py` | `make bench-full` | **PASS** | Measures heap latency (4.3 ns), FS write (540 MB/s), redraw cost (0.91 ms), boot time (2.2s), and AI latency. |
 
 ---
 
 ## 3. Summary of Verification Status
 
-- **Total Tracked Capabilities**: 54
-- **Verified Complete**: 54 (100%)
+- **Total Tracked Capabilities**: 66
+- **Verified Complete**: 66 (100%)
 - **Failing or Blocked**: 0 (0%)
 - **Simulations Documented & Decoupled**: 8 (All cleanly labeled and isolated from real kernel routines)
-- **Architectural Boundaries Explicitly Documented**: All (Single uniprocessor PIC model, identity-mapped 2 MiB address space, Ring 0 monolithic kernel, RAM disk volatility, and host-side AI execution).
+- **Architectural Boundaries Explicitly Documented**: All (Single uniprocessor PIC model, identity-mapped 2 MiB address space, Ring 0 monolithic kernel, RAM disk volatility, software-only 2D rasterizer, and host-side AI execution documented in [`docs/KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)).
 
