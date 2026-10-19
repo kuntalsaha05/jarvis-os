@@ -2,6 +2,7 @@
 import subprocess
 import time
 import sys
+import threading
 
 def main():
     print("==================================================")
@@ -46,6 +47,9 @@ def main():
         "files\n"
         "syscall\n"
         "ai\n"
+        "status\n"
+        "irq\n"
+        "threads\n"
         "diag\n"
         "dmesg\n"
         "hal\n"
@@ -54,6 +58,12 @@ def main():
         "netstat\n"
         "nettest\n"
         "ping 10.0.2.15\n"
+        "secstat\n"
+        "audit\n"
+        "whoami\n"
+        "auth guest\n"
+        "touch denied_touch.txt\n"
+        "auth admin jarvis_admin_2026\n"
     ).encode("utf-8")
 
     start_time = time.time()
@@ -65,7 +75,7 @@ def main():
             stderr=subprocess.PIPE
         )
 
-        stdout_data, stderr_data = proc.communicate(input=commands_to_send, timeout=35)
+        stdout_data, stderr_data = proc.communicate(input=commands_to_send, timeout=30)
 
     except subprocess.TimeoutExpired:
         proc.kill()
@@ -158,7 +168,12 @@ def main():
         ("ARP Resolution Shell (arp)", "JARVIS-OS ARP CACHE RESOLUTION"),
         ("Ping Execution Shell (ping)", "PING 10.0.2.15"),
         ("Nettest Invariants Shell", "Running Modular Networking Stack Invariant Suite..."),
-        ("Nettest Invariants Verified", "[PASS] All networking invariants verified")
+        ("Nettest Invariants Verified", "[PASS] All networking invariants verified"),
+        ("Security Invariants Boot", "Security & access invariants: PASS"),
+        ("Security Status Shell (secstat)", "JARVIS-OS SECURITY & ACCESS CONTROL"),
+        ("Security Principal (whoami)", "Active Principal :"),
+        ("Security Audit Log Shell (audit)", "[KERN_SEC_AUDIT] SECURITY AUDIT LOG"),
+        ("Role Switching Shell (auth)", "auth: switched to role GUEST")
     ]
 
 

@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "../process/process.h"
 #include "../process/scheduler.h"
+#include "../security/security.h"
 
 extern volatile uint64_t timer_ticks;
 
@@ -101,6 +102,9 @@ int ipc_get_stats(uint32_t queue_id, ipc_queue_stats_t *stats)
 
 int ipc_send_to_queue(uint32_t queue_id, const ipc_message_t *message)
 {
+    if (security_check_permission(PERM_PROC_OP, SEC_ACT_IPC_SEND, "ipc_queue", (int32_t)queue_id) != SEC_OK)
+        return IPC_ERR_PERMISSION;
+
     if (message == NULL || message->length > IPC_MESSAGE_SIZE)
         return IPC_ERR_INVALID;
 

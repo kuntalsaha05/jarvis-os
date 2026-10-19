@@ -35,6 +35,7 @@
 #include "interrupts/idt.h"
 #include "hal/hal.h"
 #include "net/netstack.h"
+#include "security/security.h"
 
 /* Provide stubs for terminal functions when running in host unit test mode */
 void terminal_write(const char *str) {
@@ -47,6 +48,10 @@ void terminal_putchar(char c) {
 
 void terminal_write_number(uint32_t n) {
     printf("%u", n);
+}
+
+void terminal_write_hex(uint8_t val) {
+    printf("%02X", val);
 }
 
 /* Provide stubs for scheduler and timer when running in host unit test mode */
@@ -1057,6 +1062,97 @@ static void test_networking_stack_invariants(void)
     printf("PASS\n");
 }
 
+static void test_security_and_access_control_invariants(void)
+{
+    printf("Test 21: Security & Access Control Invariants... ");
+
+    /* 1. Core invariant test */
+    int res = test_security_invariants();
+    assert(res == 0);
+
+    /* 2. Verify deny-by-default on unauthorized actions */
+    security_set_current_role(SEC_ROLE_GUEST, NULL);
+    assert(security_check_permission(PERM_FS_WRITE, SEC_ACT_FS_WRITE, "blocked.txt", 0) == SEC_ERR_DENIED);
+    assert(security_check_permission(PERM_ADMIN_OP, SEC_ACT_POWER_ACTION, "shutdown", 0) == SEC_ERR_DENIED);
+    assert(security_check_permission(PERM_PROC_OP, SEC_ACT_PROC_CREATE, "proc", 0) == SEC_ERR_DENIED);
+    assert(security_check_permission(PERM_READ_DIAG, SEC_ACT_DIAG_READ, "telemetry", 0) == SEC_OK);
+
+    /* 3. Verify user role permissions */
+    security_set_current_role(SEC_ROLE_USER, NULL);
+    assert(security_check_permission(PERM_FS_READ, SEC_ACT_FS_READ, "test.txt", 0) == SEC_OK);
+    assert(security_check_permission(PERM_FS_WRITE, SEC_ACT_FS_WRITE, "test.txt", 0) == SEC_OK);
+    assert(security_check_permission(PERM_PROC_OP, SEC_ACT_PROC_CREATE, "proc", 0) == SEC_OK);
+    assert(security_check_permission(PERM_NET_ACCESS, SEC_ACT_NET_TX, "eth0", 64) == SEC_OK);
+    assert(security_check_permission(PERM_ADMIN_OP, SEC_ACT_POWER_ACTION, "shutdown", 0) == SEC_ERR_DENIED);
+
+    /* 4. Verify admin token elevation */
+    assert(security_set_current_role(SEC_ROLE_ADMIN, "invalid_secret") == SEC_ERR_AUTH_FAILED);
+    assert(security_get_current_role() == SEC_ROLE_USER);
+    assert(security_set_current_role(SEC_ROLE_ADMIN, "jarvis_admin_2026") == SEC_OK);
+    assert(security_get_current_role() == SEC_ROLE_ADMIN);
+    assert(security_check_permission(PERM_ADMIN_OP, SEC_ACT_POWER_ACTION, "reboot", 0) == SEC_OK);
+
+    /* 5. Verify filesystem permission boundary enforcement */
+    fs_format();
+    security_set_current_role(SEC_ROLE_GUEST, NULL);
+    assert(fs_create("denied_file.txt") == FS_ERR_PERMISSION_DENIED);
+
+    security_set_current_role(SEC_ROLE_ADMIN, "jarvis_admin_2026");
+    assert(fs_create("allowed_file.txt") == FS_OK);
+    int fd = fs_open("allowed_file.txt");
+    assert(fd >= 0);
+
+    security_set_current_role(SEC_ROLE_GUEST, NULL);
+    assert(fs_write(fd, "test", 4) == FS_ERR_PERMISSION_DENIED);
+    assert(fs_truncate(fd, 0) == FS_ERR_PERMISSION_DENIED);
+    assert(fs_delete("allowed_file.txt") == FS_ERR_PERMISSION_DENIED);
+
+    security_set_current_role(SEC_ROLE_ADMIN, "jarvis_admin_2026");
+    fs_close(fd);
+    assert(fs_delete("allowed_file.txt") == FS_OK);
+
+    /* 6. Verify IPC permission boundary enforcement */
+    security_set_current_role(SEC_ROLE_GUEST, NULL);
+    ipc_message_t blocked_msg = { .sender_pid = 1, .receiver_pid = 2, .length = 4, .data = "TEST" };
+    assert(ipc_send_to_queue(0, &blocked_msg) == IPC_ERR_PERMISSION);
+
+    security_set_current_role(SEC_ROLE_ADMIN, "jarvis_admin_2026");
+    assert(ipc_send_to_queue(0, &blocked_msg) == IPC_SUCCESS);
+
+    /* 7. Verify buffer validation bounds */
+    assert(security_validate_buffer(NULL, 10, 0) == SEC_ERR_NULL_PTR);
+    assert(security_validate_buffer((void *)(uintptr_t)0xFFFFFFFFFFFFFFF0ULL, 32, 0) == SEC_ERR_OVERFLOW);
+    assert(security_validate_buffer((void *)(uintptr_t)0x30000000ULL, 100, 0) == SEC_ERR_OUT_OF_BOUNDS);
+    assert(security_validate_buffer((void *)(uintptr_t)0x00050000ULL, 100, 1) == SEC_ERR_DENIED);
+    assert(security_validate_buffer((void *)(uintptr_t)0x00200000ULL, 1024, 0) == SEC_OK);
+
+    /* 8. Verify path traversal rejection */
+    assert(security_validate_path(NULL) == SEC_ERR_NULL_PTR);
+    assert(security_validate_path("") == SEC_ERR_INVALID_PARAM);
+    assert(security_validate_path("../../../etc/shadow") == SEC_ERR_TRAVERSAL);
+    assert(security_validate_path("dir/../secret.cfg") == SEC_ERR_TRAVERSAL);
+    assert(security_validate_path("valid_file_name.cfg") == SEC_OK);
+
+    /* 9. Verify circular audit log overflow & telemetry tracking */
+    security_init();
+    for (int i = 0; i < 50; i++) {
+        security_audit_log(SEC_ACT_DIAG_READ, PERM_READ_DIAG, SEC_AUDIT_ALLOWED, "audit_entry", i);
+    }
+    security_telemetry_t tel;
+    security_get_telemetry(&tel);
+    assert(tel.total_events >= 50);
+    assert(tel.evicted_count > 0);
+
+    /* 10. Verify diagnostic telemetry & audit log output without crashing */
+    security_print_status();
+    security_print_audit_log();
+
+    /* Reset to clean admin state */
+    security_init();
+
+    printf("PASS\n");
+}
+
 int main(void)
 {
     printf("==================================================\n");
@@ -1083,6 +1179,7 @@ int main(void)
     test_diagnostics_and_recovery_invariants();
     test_hal_subsystem_invariants();
     test_networking_stack_invariants();
+    test_security_and_access_control_invariants();
 
     printf("==================================================\n");
     printf("   ALL HOST UNIT TESTS COMPLETED SUCCESSFULLY!    \n");

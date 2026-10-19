@@ -127,9 +127,19 @@ def step_3_boot_qemu_and_capture(f_out):
         "disk\n"
         "syscall\n"
         "ai\n"
+        "status\n"
+        "ticks\n"
+        "irq\n"
+        "threads\n"
+        "scheduler\n"
+        "memory\n"
+        "pftest\n"
+        "ipc\n"
+        "sync\n"
+        "df\n"
     ).encode("utf-8")
 
-    log_print("  Launching QEMU (256M RAM, serial stdio, timeout 20s)...", f_out)
+    log_print("  Launching QEMU (256M RAM, serial stdio, timeout 35s)...", f_out)
     start_time = time.time()
     try:
         proc = subprocess.Popen(
@@ -138,7 +148,7 @@ def step_3_boot_qemu_and_capture(f_out):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-        stdout_data, stderr_data = proc.communicate(input=commands_to_send, timeout=16)
+        stdout_data, stderr_data = proc.communicate(input=commands_to_send, timeout=35)
     except subprocess.TimeoutExpired:
         proc.kill()
         stdout_data, stderr_data = proc.communicate()

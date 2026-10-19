@@ -61,7 +61,8 @@ OBJECTS = \
 	build/icmp.o \
 	build/udp.o \
 	build/dhcp.o \
-	build/netstack.o
+	build/netstack.o \
+	build/security.o
 
 .PHONY: all clean iso run run-headless test test-ai test-qemu test-gui test-release test-shutdown test-all bench bench-full
 
@@ -223,6 +224,9 @@ build/dhcp.o: kernel/net/dhcp.c kernel/net/dhcp.h | build
 build/netstack.o: kernel/net/netstack.c kernel/net/netstack.h | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
+build/security.o: kernel/security/security.c kernel/security/security.h | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
 $(KERNEL): $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
@@ -242,7 +246,7 @@ run-headless: $(ISO)
 
 test:
 	mkdir -p build
-	gcc -O2 -Wall -Wextra -DHOST_TEST -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/memory/heap.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/event.c kernel/gui/wm.c kernel/gui/config.c kernel/gui/notification.c kernel/gui/app.c kernel/gui/desktop.c kernel/interrupts/idt.c kernel/diagnostics/diagnostics.c kernel/drivers/power.c kernel/hal/hal.c kernel/net/netdev.c kernel/net/ethernet.c kernel/net/arp.c kernel/net/ipv4.c kernel/net/icmp.c kernel/net/udp.c kernel/net/dhcp.c kernel/net/netstack.c -o build/host_tests
+	gcc -O2 -Wall -Wextra -DHOST_TEST -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/memory/heap.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/event.c kernel/gui/wm.c kernel/gui/config.c kernel/gui/notification.c kernel/gui/app.c kernel/gui/desktop.c kernel/interrupts/idt.c kernel/diagnostics/diagnostics.c kernel/drivers/power.c kernel/hal/hal.c kernel/net/netdev.c kernel/net/ethernet.c kernel/net/arp.c kernel/net/ipv4.c kernel/net/icmp.c kernel/net/udp.c kernel/net/dhcp.c kernel/net/netstack.c kernel/security/security.c -o build/host_tests
 	./build/host_tests
 
 test-ai:
@@ -264,7 +268,7 @@ test-all: test test-ai test-qemu test-gui test-shutdown test-release bench
 
 bench:
 	mkdir -p build
-	gcc -O2 -Wall -Wextra -Ikernel tests/perf_bench.c kernel/memory/heap.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/wm.c kernel/gui/event.c -o build/perf_bench
+	gcc -O2 -Wall -Wextra -Ikernel tests/perf_bench.c kernel/security/security.c kernel/memory/heap.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/wm.c kernel/gui/event.c -o build/perf_bench
 	./build/perf_bench
 
 bench-full: $(ISO) bench

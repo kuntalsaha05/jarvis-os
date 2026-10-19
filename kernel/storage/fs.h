@@ -26,6 +26,7 @@
 #define FS_ERR_TOO_MANY_OPEN    -8
 #define FS_ERR_BAD_FD           -9
 #define FS_ERR_IO               -10
+#define FS_ERR_PERMISSION_DENIED -11
 
 typedef struct {
     char name[FS_MAX_FILENAME];

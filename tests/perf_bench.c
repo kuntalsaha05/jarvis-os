@@ -11,13 +11,16 @@
 #include "gui/font.h"
 #include "gui/graphics.h"
 #include "gui/wm.h"
+#include "security/security.h"
 #include "gui/event.h"
 
 /* Terminal and debug stubs for host test */
 void terminal_write(const char *str) { (void)str; }
 void terminal_putchar(char c) { (void)c; }
 void terminal_write_number(uint32_t n) { (void)n; }
+void terminal_write_hex(uint8_t val) { (void)val; }
 void debug_puts(const char *str) { (void)str; }
+volatile uint64_t timer_ticks = 100;
 
 static double get_time_sec(void)
 {
@@ -28,6 +31,7 @@ static double get_time_sec(void)
 
 int main(void)
 {
+    security_init();
     printf("==================================================\n");
     printf("     JARVIS-OS PHASE 13 PERFORMANCE BENCHMARK     \n");
     printf("==================================================\n");

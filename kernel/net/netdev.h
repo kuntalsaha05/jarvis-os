@@ -22,6 +22,7 @@
 #define NET_ERR_TX_FAILED     -6
 #define NET_ERR_MALFORMED     -7
 #define NET_ERR_NOT_FOUND     -8
+#define NET_ERR_PERMISSION    -9
 
 /* Device Operational Flags */
 #define NET_DEV_FLAG_UP        0x01

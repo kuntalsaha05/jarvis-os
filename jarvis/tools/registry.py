@@ -1,8 +1,32 @@
 import time
+import json
+import re
 import concurrent.futures
 from enum import Enum
 from typing import Callable, Dict, Any, List, Optional, Set
 from dataclasses import dataclass, field
+
+MAX_ARG_STRING_LENGTH = 1024
+MAX_ARGS_PAYLOAD_SIZE = 8192
+MAX_OUTPUT_LENGTH = 4096
+MAX_AUDIT_LOG_ENTRIES = 128
+
+DANGEROUS_SHELL_PATTERNS = re.compile(r'[;&|`$><*?~\x00]')
+SECRET_PATTERNS = re.compile(
+    r'(bearer\s+[a-zA-Z0-9_\-\.]+)|(key-[a-zA-Z0-9]+)|(token\s*=\s*[^\s]+)|(password\s*=\s*[^\s]+)|(secret\s*=\s*[^\s]+)',
+    re.IGNORECASE
+)
+
+
+def redact_secrets(val: Any) -> Any:
+    """Recursively redact sensitive credential patterns from strings, dicts, and lists."""
+    if isinstance(val, str):
+        return SECRET_PATTERNS.sub('[REDACTED]', val)
+    elif isinstance(val, dict):
+        return {k: redact_secrets(v) for k, v in val.items()}
+    elif isinstance(val, list):
+        return [redact_secrets(v) for v in val]
+    return val
 
 
 class PermissionLevel(Enum):
@@ -67,6 +91,7 @@ class ToolRegistry:
             "system.trigger_panic"
         }
         self.audit_log: List[AuditEntry] = []
+        self.evicted_audit_count: int = 0
         self._register_default_tools()
 
     def register_tool(
@@ -134,14 +159,24 @@ class ToolRegistry:
                     "permission_level": tool.permission.value
                 }
 
-        # 3. Required Parameters Check
+        # 3. Payload size enforcement
+        try:
+            payload_str = json.dumps(arguments)
+            if len(payload_str) > MAX_ARGS_PAYLOAD_SIZE:
+                error = f"Validation Error: Total arguments size ({len(payload_str)} bytes) exceeds maximum of {MAX_ARGS_PAYLOAD_SIZE} bytes."
+                self._log_audit(name, arguments, "VALIDATION_FAILED", (time.time() - start_time) * 1000, error)
+                return {"status": "ERROR", "error": error}
+        except Exception:
+            pass
+
+        # 4. Required Parameters Check
         for req in tool.required_params:
             if req not in arguments:
                 error = f"Validation Error: Missing required parameter '{req}' for tool '{name}'."
                 self._log_audit(name, arguments, "VALIDATION_FAILED", (time.time() - start_time) * 1000, error)
                 return {"status": "ERROR", "error": error}
 
-        # 4. Parameter Schema Type Validation
+        # 5. Parameter Schema Type, Bounds, and Shell Metacharacter Validation
         for param, expected_type in tool.param_schema.items():
             if param in arguments:
                 val = arguments[param]
@@ -153,11 +188,33 @@ class ToolRegistry:
                     self._log_audit(name, arguments, "VALIDATION_FAILED", (time.time() - start_time) * 1000, error)
                     return {"status": "ERROR", "error": error}
 
-        # 5. Execution within Timeout Protection
+                if isinstance(val, str):
+                    if len(val) > MAX_ARG_STRING_LENGTH:
+                        error = f"Validation Error: Parameter '{param}' length ({len(val)}) exceeds maximum {MAX_ARG_STRING_LENGTH} chars."
+                        self._log_audit(name, arguments, "VALIDATION_FAILED", (time.time() - start_time) * 1000, error)
+                        return {"status": "ERROR", "error": error}
+                    if DANGEROUS_SHELL_PATTERNS.search(val):
+                        error = f"Security Violation: Parameter '{param}' contains prohibited shell metacharacters."
+                        self._log_audit(name, arguments, "SECURITY_VIOLATION", (time.time() - start_time) * 1000, error)
+                        return {"status": "ERROR", "error": error}
+
+        # 6. Execution within Timeout Protection
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(tool.handler, arguments)
                 result = future.result(timeout=tool.timeout_sec)
+
+            # Bounded output truncation
+            if isinstance(result, dict):
+                res_str = json.dumps(result)
+                if len(res_str) > MAX_OUTPUT_LENGTH:
+                    result = {
+                        "truncated": True,
+                        "partial": res_str[:MAX_OUTPUT_LENGTH],
+                        "warning": f"[TRUNCATED: output exceeded {MAX_OUTPUT_LENGTH} chars]"
+                    }
+            elif isinstance(result, str) and len(result) > MAX_OUTPUT_LENGTH:
+                result = result[:MAX_OUTPUT_LENGTH] + f"\n[TRUNCATED: output exceeded {MAX_OUTPUT_LENGTH} chars]"
 
             elapsed = (time.time() - start_time) * 1000
             self._log_audit(name, arguments, "SUCCESS", elapsed)
@@ -174,10 +231,14 @@ class ToolRegistry:
             return {"status": "ERROR", "error": error}
 
     def _log_audit(self, name: str, args: Dict[str, Any], status: str, elapsed: float, err: Optional[str] = None):
+        clean_args = redact_secrets(args)
+        if len(self.audit_log) >= MAX_AUDIT_LOG_ENTRIES:
+            self.audit_log.pop(0)
+            self.evicted_audit_count += 1
         self.audit_log.append(AuditEntry(
             timestamp=time.time(),
             tool_name=name,
-            arguments=args,
+            arguments=clean_args,
             status=status,
             execution_time_ms=elapsed,
             error_message=err

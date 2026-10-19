@@ -27,6 +27,7 @@
 #include "hal/hal.h"
 #include "net/netstack.h"
 #include "net/arp.h"
+#include "security/security.h"
 #include "../debug.h"
 #include <stdint.h>
 
@@ -109,7 +110,12 @@ static void print_help(void)
     terminal_write("  arp        - Display ARP cache address resolution table\n");
     terminal_write("  netstat    - Display network telemetry & packet statistics\n");
     terminal_write("  ping <ip>  - Send ICMP echo requests to target IPv4 address\n");
-    terminal_write("  nettest    - Run unified networking stack verification tests\n");
+    terminal_write("  nettest    - Run unified networking stack verification tests\n\n");
+    terminal_write("Security & Access Control (Phase 21):\n");
+    terminal_write("  secstat    - Display security role, permissions & audit telemetry\n");
+    terminal_write("  audit      - Display circular security audit event log [KERN_SEC_AUDIT]\n");
+    terminal_write("  whoami     - Display active security principal and permission mask\n");
+    terminal_write("  auth <r>   - Switch security role (guest, user, ai, anon, admin [token])\n");
     terminal_write("==================================================\n");
 }
 
@@ -662,6 +668,56 @@ static void execute_command(void)
     }
     else if (cmd_match(command, "ai")) {
         print_ai_status();
+    }
+    else if (cmd_match(command, "secstat") || cmd_match(command, "security")) {
+        security_print_status();
+    }
+    else if (cmd_match(command, "audit")) {
+        security_print_audit_log();
+    }
+    else if (cmd_match(command, "whoami")) {
+        terminal_write("\nActive Principal : ");
+        terminal_write(security_role_name(security_get_current_role()));
+        terminal_write("\nPermissions      : 0x000000");
+        terminal_write_hex((uint8_t)security_get_role_permissions(security_get_current_role()));
+        terminal_putchar('\n');
+    }
+    else if (cmd_starts_with(command, "auth")) {
+        const char *p = command + 4;
+        while (*p == ' ') p++;
+        char role_str[16];
+        int ri = 0;
+        while (*p && *p != ' ' && ri < 15) {
+            role_str[ri++] = *p++;
+        }
+        role_str[ri] = '\0';
+        while (*p == ' ') p++;
+        const char *token = (*p != '\0') ? p : NULL;
+
+        security_role_t target = SEC_ROLE_ANONYMOUS;
+        int valid = 1;
+        if (cmd_match(role_str, "admin")) target = SEC_ROLE_ADMIN;
+        else if (cmd_match(role_str, "user")) target = SEC_ROLE_USER;
+        else if (cmd_match(role_str, "guest")) target = SEC_ROLE_GUEST;
+        else if (cmd_match(role_str, "ai") || cmd_match(role_str, "agent")) target = SEC_ROLE_AI_AGENT;
+        else if (cmd_match(role_str, "anon") || cmd_match(role_str, "anonymous")) target = SEC_ROLE_ANONYMOUS;
+        else {
+            terminal_write("\nUsage: auth <admin|user|guest|ai|anon> [token]\n");
+            valid = 0;
+        }
+
+        if (valid) {
+            int res = security_set_current_role(target, token);
+            if (res == SEC_OK) {
+                terminal_write("\nauth: switched to role ");
+                terminal_write(security_role_name(target));
+                terminal_putchar('\n');
+            } else {
+                terminal_write("\nauth: authentication failed (error code ");
+                terminal_write_number((uint32_t)(-res));
+                terminal_write(")\n");
+            }
+        }
     }
     else if (cmd_match(command, "gui") || cmd_match(command, "desktop")) {
         const fb_info_t *fb = fb_get_info();

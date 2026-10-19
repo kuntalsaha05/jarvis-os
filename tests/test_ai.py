@@ -474,6 +474,92 @@ class TestAICompanion(unittest.TestCase):
         self.assertEqual(static_ip_config["ip"], "10.0.2.15")
         self.assertEqual(static_ip_config["gateway"], "10.0.2.2")
 
+    def test_phase21_security_and_access_control(self):
+        """Phase 21: Verify security boundaries, argument hardening, shell injection blocking, secret redaction, and bounded logs."""
+        from jarvis.tools.registry import (
+            PermissionLevel,
+            redact_secrets,
+            MAX_ARG_STRING_LENGTH,
+            MAX_ARGS_PAYLOAD_SIZE,
+            MAX_OUTPUT_LENGTH,
+            MAX_AUDIT_LOG_ENTRIES
+        )
+
+        # 1. Deny-by-default for unregistered or unapproved tools
+        res_denied = self.registry.execute_tool("unregistered.dangerous_tool", {})
+        self.assertEqual(res_denied["status"], "ERROR")
+        self.assertIn("Permission Denied", res_denied["error"])
+
+        # 2. Strict Argument Schema & Oversized Parameter Rejection
+        self.registry.register_tool(
+            "test.secure_action",
+            "Test tool for security validation",
+            PermissionLevel.READ_ONLY,
+            lambda args: {"echo": args.get("param", "")},
+            param_schema={"param": str},
+            required_params=["param"]
+        )
+        self.registry.allowlist.add("test.secure_action")
+
+        # Missing required parameter
+        res_missing = self.registry.execute_tool("test.secure_action", {})
+        self.assertEqual(res_missing["status"], "ERROR")
+        self.assertIn("Missing required parameter", res_missing["error"])
+
+        # Parameter string length limit (> 1024 chars)
+        huge_arg = "A" * (MAX_ARG_STRING_LENGTH + 10)
+        res_huge = self.registry.execute_tool("test.secure_action", {"param": huge_arg})
+        self.assertEqual(res_huge["status"], "ERROR")
+        self.assertIn("exceeds maximum", res_huge["error"])
+
+        # 3. Prohibited Shell Metacharacters (Command Injection Prevention)
+        dangerous_inputs = [
+            "test; rm -rf /",
+            "file && cat /etc/passwd",
+            "`whoami`",
+            "test | grep root",
+            "file$(id)"
+        ]
+        for bad_input in dangerous_inputs:
+            res_sec = self.registry.execute_tool("test.secure_action", {"param": bad_input})
+            self.assertEqual(res_sec["status"], "ERROR")
+            self.assertIn("prohibited shell metacharacters", res_sec["error"])
+
+        # 4. Secret & Token Redaction in Context and Logs
+        secret_text = "Bearer super_secret_token_12345"
+        redacted = redact_secrets(secret_text)
+        self.assertNotIn("super_secret_token_12345", redacted)
+        self.assertIn("[REDACTED]", redacted)
+
+        dict_with_secrets = {
+            "api_key": "key-998877665544",
+            "nested": {"token": "token=my_secret_token"}
+        }
+        redacted_dict = redact_secrets(dict_with_secrets)
+        self.assertNotIn("key-998877665544", str(redacted_dict))
+        self.assertNotIn("my_secret_token", str(redacted_dict))
+        self.assertIn("[REDACTED]", str(redacted_dict))
+
+        # 5. Output Truncation for Bounded Buffer Protection
+        self.registry.register_tool(
+            "test.large_output",
+            "Test tool generating huge output",
+            PermissionLevel.READ_ONLY,
+            lambda args: {"content": "Z" * (MAX_OUTPUT_LENGTH + 500)}
+        )
+        self.registry.allowlist.add("test.large_output")
+        res_large = self.registry.execute_tool("test.large_output", {})
+        self.assertEqual(res_large["status"], "SUCCESS")
+        self.assertTrue(res_large["result"].get("truncated", False))
+        self.assertIn("TRUNCATED", res_large["result"].get("warning", ""))
+
+        # 6. Bounded Circular Audit Log & Eviction Accounting
+        start_evicted = self.registry.evicted_audit_count
+        for i in range(MAX_AUDIT_LOG_ENTRIES + 20):
+            self.registry.execute_tool("kernel.query_status", {})
+        self.assertEqual(len(self.registry.audit_log), MAX_AUDIT_LOG_ENTRIES)
+        self.assertGreater(self.registry.evicted_audit_count, start_evicted)
+
 
 if __name__ == "__main__":
     unittest.main()

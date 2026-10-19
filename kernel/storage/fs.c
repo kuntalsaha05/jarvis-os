@@ -1,6 +1,7 @@
 #include "fs.h"
 #include "block.h"
 #include "../drivers/terminal.h"
+#include "../security/security.h"
 
 typedef struct {
     int inode_idx;
@@ -39,6 +40,10 @@ static void str_copy(char *dst, const char *src, uint32_t max_len)
 static int normalize_path(const char *path, char *out, uint32_t max_len)
 {
     if (path == 0 || out == 0 || max_len == 0) return FS_ERR_INVALID_PARAM;
+
+    if (security_validate_path(path) != SEC_OK) {
+        return FS_ERR_INVALID_PARAM;
+    }
 
     /* Skip leading slashes */
     while (*path == '/') path++;
@@ -175,6 +180,10 @@ int fs_create(const char *name)
     int norm = normalize_path(name, clean_name, sizeof(clean_name));
     if (norm != FS_OK) return norm;
 
+    if (security_check_permission(PERM_FS_WRITE, SEC_ACT_FS_WRITE, clean_name, 0) != SEC_OK) {
+        return FS_ERR_PERMISSION_DENIED;
+    }
+
     for (uint32_t i = 0; i < FS_MAX_FILES; i++) {
         if (inodes[i].used && str_equals(inodes[i].name, clean_name)) {
             return FS_ERR_ALREADY_EXISTS;
@@ -201,6 +210,10 @@ int fs_open(const char *name)
     char clean_name[FS_MAX_FILENAME];
     int norm = normalize_path(name, clean_name, sizeof(clean_name));
     if (norm != FS_OK) return norm;
+
+    if (security_check_permission(PERM_FS_READ, SEC_ACT_FS_READ, clean_name, 0) != SEC_OK) {
+        return FS_ERR_PERMISSION_DENIED;
+    }
 
     int inode_idx = -1;
     for (uint32_t i = 0; i < FS_MAX_FILES; i++) {
@@ -233,6 +246,11 @@ int fs_write(int fd, const void *buf, uint32_t count)
 
     fs_inode_t *node = &inodes[open_files[fd].inode_idx];
     if (!node->used) { fs_stat_errors++; return FS_ERR_BAD_FD; }
+
+    if (security_check_permission(PERM_FS_WRITE, SEC_ACT_FS_WRITE, node->name, (int32_t)count) != SEC_OK) {
+        fs_stat_errors++;
+        return FS_ERR_PERMISSION_DENIED;
+    }
 
     if (count == 0) return 0;
 
@@ -396,6 +414,11 @@ int fs_truncate(int fd, uint32_t new_size)
     fs_inode_t *node = &inodes[open_files[fd].inode_idx];
     if (!node->used) return FS_ERR_BAD_FD;
 
+    if (security_check_permission(PERM_FS_WRITE, SEC_ACT_FS_WRITE, node->name, (int32_t)new_size) != SEC_OK) {
+        fs_stat_errors++;
+        return FS_ERR_PERMISSION_DENIED;
+    }
+
     if (new_size > FS_MAX_FILE_SIZE) return FS_ERR_FILE_TOO_LARGE;
 
     if (new_size < node->size) {
@@ -462,6 +485,10 @@ int fs_delete(const char *name)
     int norm = normalize_path(name, clean_name, sizeof(clean_name));
     if (norm != FS_OK) return norm;
 
+    if (security_check_permission(PERM_FS_WRITE, SEC_ACT_FS_DELETE, clean_name, 0) != SEC_OK) {
+        return FS_ERR_PERMISSION_DENIED;
+    }
+
     for (uint32_t i = 0; i < FS_MAX_FILES; i++) {
         if (inodes[i].used && str_equals(inodes[i].name, clean_name)) {
             /* Invalidate any active file descriptors referencing this inode */
@@ -514,6 +541,11 @@ int fs_stat(const char *name, fs_stat_t *st)
 
 void fs_list(void)
 {
+    if (security_check_permission(PERM_FS_READ, SEC_ACT_FS_READ, "fs_list", 0) != SEC_OK) {
+        terminal_write("Permission Denied: Missing PERM_FS_READ\n");
+        return;
+    }
+
     terminal_write("\nJARVIS-FS Directory Listing:\n");
     terminal_write("----------------------------------------------------\n");
     terminal_write("Filename                     Size (bytes)   Blocks\n");

@@ -1,4 +1,5 @@
 #include "netdev.h"
+#include "../security/security.h"
 
 /* Static Device Registry */
 static net_device_t *s_devices[NET_MAX_DEVICES];
@@ -98,6 +99,11 @@ int netdev_dequeue_rx(net_device_t *dev, void *out_frame, uint16_t max_len)
 
 int netdev_transmit(net_device_t *dev, const void *frame, uint16_t len)
 {
+    if (security_check_permission(PERM_NET_ACCESS, SEC_ACT_NET_TX, dev ? dev->name : "netdev", (int32_t)len) != SEC_OK) {
+        if (dev) dev->stats.tx_errors++;
+        return NET_ERR_PERMISSION;
+    }
+
     if (!dev || !frame) return NET_ERR_INVALID_PARAM;
     if (!dev->is_up) return NET_ERR_DEVICE_DOWN;
     if (len < ETH_HLEN || len > ETH_MAX_FRAME_LEN) return NET_ERR_BUFFER_BOUNDS;

@@ -110,16 +110,23 @@ To ensure absolute transparency and prevent ambiguity, every requirement is tagg
 | **86** | **IPv4 Packet Processing & RFC 1071 Checksum Engine** | Real Kernel Mechanism | `kernel/net/ipv4.c`, `ipv4.h` | `make test` (*IPv4 Invariants*) | **PASS** | 20-byte IPv4 packet validation, 16-bit one's complement Internet checksum (RFC 1071), dotted-decimal string/integer parsing, IP address matching, upper protocol demux (ICMP, UDP). |
 | **87** | **ICMP Echo Subsystem & Network Diagnostics** | Real Kernel Mechanism | `kernel/net/icmp.c`, `netstack.c`, `shell/shell.c` | `make test` (*ICMP Invariants*), `make test-qemu` | **PASS** | ICMP Type 8 Echo Request and Type 0 Echo Reply, ping round-trip telemetry tracking, diagnostic shell commands (`ping <ip>`, `ifconfig`, `ip`, `netstat`, `nettest`). |
 | **88** | **UDP Transport Demux & DHCP Auto-Configuration** | Real Kernel Mechanism | `kernel/net/udp.c`, `dhcp.c` | `make test` (*UDP & DHCP Invariants*) | **PASS** | 8-byte UDP header parsing and length validation, 16-entry port registration callback registry, RFC 2131 DHCP state machine (DISCOVER/OFFER/REQUEST/ACK) with safe static fallback to 10.0.2.15. |
+| **89** | **Granular Permission Bitmasks & 5-Tier Role Model** | Real Kernel Mechanism | `kernel/security/security.h`, `security.c` | `make test` (*Security Invariants*), `make test-qemu` | **PASS** | 32-bit permission bitmask (`PERM_READ_DIAG`, `PERM_FS_READ`, `PERM_FS_WRITE`, `PERM_PROC_OP`, `PERM_NET_ACCESS`, `PERM_AI_EXEC`, `PERM_ADMIN_OP`), 5 roles (ANON, GUEST, USER, AI_AGENT, ADMIN), deny-by-default execution. |
+| **90** | **Constant-Time Elevation Token Authentication** | Real Kernel Mechanism | `kernel/security/security.c`, `shell/shell.c` | `make test` (*Security Invariants*), `make test-qemu` | **PASS** | Role elevation to `ROLE_ADMIN` gated by constant-time comparison against elevation secret; invalid tokens rejected and logged to audit buffer; active principal tracking (`whoami`). |
+| **91** | **Kernel Interface & Boundary Hardening** | Real Kernel Mechanism | `kernel/syscall/syscall.c`, `storage/fs.c`, `ipc/ipc.c`, `net/netdev.c` | `make test` (*Security Invariants*), `make test-qemu` | **PASS** | Pointer validity and wrap-around bounds checking (`security_validate_buffer`), path traversal prevention (`..`), syscall permission validation, IPC queue boundary enforcement, and network transmit gating. |
+| **92** | **Host AI Companion Hardening & Secret Redaction** | Host AI Architecture | `jarvis/tools/registry.py`, `tests/test_ai.py` | `make test-ai` | **PASS** | Strict schema validation, argument length caps (1024B arg, 8192B payload, 4096B output), dangerous shell metacharacter regex filter, recursive secret/credential redaction (`[REDACTED]`), bounded audit log (128 entries). |
+| **93** | **Bounded Circular In-Kernel Security Audit Log** | Real Kernel Mechanism | `kernel/security/security.c` | `make test` (*Security Invariants*), `make test-qemu` | **PASS** | 32-slot static circular ring buffer with tick timestamps, role tracking, action (ALLOW/DENY), subsystem, description, and dropped eviction accounting without unbounded memory growth. |
+| **94** | **Interactive Shell Security & Audit Commands** | Real Kernel Mechanism | `kernel/shell/shell.c`, `kernel/security/security.c` | `make test-qemu` | **PASS** | Interactive shell commands `secstat` (status & metrics), `whoami` (active role & privileges), `auth <role> [token]` (context switching), and `audit` (audit log dump). |
 
 ---
 
 ## 3. Summary of Verification Status
 
-- **Total Tracked Capabilities**: 88
-- **Verified Complete**: 88 (100%)
+- **Total Tracked Capabilities**: 94
+- **Verified Complete**: 94 (100%)
 - **Failing or Blocked**: 0 (0%)
 - **Simulations Documented & Decoupled**: 8 (All cleanly labeled and isolated from real kernel routines)
-- **Architectural Boundaries Explicitly Documented**: All (Single uniprocessor PIC model, identity-mapped 2 MiB address space, Ring 0 monolithic kernel, RAM disk volatility, software-only 2D rasterizer, loopback memory backend, and host-side AI execution documented in [`docs/KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)).
+- **Architectural Boundaries Explicitly Documented**: All (Single uniprocessor PIC model, identity-mapped 2 MiB address space, Ring 0 monolithic kernel without hardware Ring 3 user isolation, RAM disk volatility, software-only 2D rasterizer, loopback memory backend, and host-side AI execution documented in [`docs/KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)).
+
 
 
 

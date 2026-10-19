@@ -4,6 +4,7 @@
 #include "../drivers/terminal.h"
 #include "../memory/heap.h"
 #include "../process/process.h"
+#include "../security/security.h"
 
 extern volatile uint64_t timer_ticks;
 
@@ -33,43 +34,67 @@ uint64_t syscall_dispatch(
     (void)arg3;
 
     if (number > SYSCALL_MAX) {
+        security_audit_log(SEC_ACT_SYSCALL, PERM_NONE, SEC_AUDIT_FAULT, "invalid_syscall", (int32_t)number);
         return (uint64_t)-1; /* Invalid syscall number */
     }
 
     switch (number)
     {
         case SYS_GET_TICKS:
+            if (security_check_permission(PERM_READ_DIAG, SEC_ACT_SYSCALL, "SYS_GET_TICKS", 0) != SEC_OK) {
+                return (uint64_t)-1;
+            }
             return timer_ticks;
 
         case SYS_ALLOCATE_MEMORY:
+            if (security_check_permission(PERM_PROC_OP, SEC_ACT_SYSCALL, "SYS_ALLOCATE_MEMORY", (int32_t)arg1) != SEC_OK) {
+                return 0;
+            }
             if (arg1 == 0 || arg1 > KERNEL_HEAP_SIZE) {
+                security_audit_log(SEC_ACT_SYSCALL, PERM_PROC_OP, SEC_AUDIT_FAULT, "alloc_size_invalid", (int32_t)arg1);
                 return 0; /* Invalid allocation size */
             }
             return (uint64_t)(uintptr_t)kmalloc((size_t)arg1);
 
         case SYS_FREE_MEMORY:
-            if (arg1 == 0) {
+            if (security_check_permission(PERM_PROC_OP, SEC_ACT_SYSCALL, "SYS_FREE_MEMORY", 0) != SEC_OK) {
+                return (uint64_t)-1;
+            }
+            if (arg1 == 0 || security_validate_buffer((void *)(uintptr_t)arg1, 1, 0) != SEC_OK) {
+                security_audit_log(SEC_ACT_SYSCALL, PERM_PROC_OP, SEC_AUDIT_FAULT, "free_ptr_invalid", 0);
                 return (uint64_t)-2; /* Invalid pointer */
             }
             kfree((void *)(uintptr_t)arg1);
             return 0;
 
         case SYS_CREATE_PROCESS:
-            if (arg1 == 0) {
+            if (security_check_permission(PERM_PROC_OP, SEC_ACT_SYSCALL, "SYS_CREATE_PROCESS", (int32_t)arg2) != SEC_OK) {
+                return (uint64_t)-1;
+            }
+            if (arg1 == 0 || security_validate_buffer((void *)(uintptr_t)arg1, 1, 0) != SEC_OK) {
+                security_audit_log(SEC_ACT_SYSCALL, PERM_PROC_OP, SEC_AUDIT_FAULT, "create_proc_entry_invalid", 0);
                 return (uint64_t)-2; /* Invalid entry point */
             }
             return (uint64_t)(int64_t)process_create(arg1, (uint32_t)arg2);
 
         case SYS_GET_PROCESS_COUNT:
+            if (security_check_permission(PERM_READ_DIAG, SEC_ACT_SYSCALL, "SYS_GET_PROCESS_COUNT", 0) != SEC_OK) {
+                return (uint64_t)-1;
+            }
             return (uint64_t)process_get_count();
 
         case SYS_TERMINATE_PROCESS:
+            if (security_check_permission(PERM_PROC_OP, SEC_ACT_SYSCALL, "SYS_TERMINATE_PROCESS", (int32_t)arg1) != SEC_OK) {
+                return (uint64_t)-1;
+            }
             if (arg1 == 0 || arg1 >= MAX_PROCESSES) {
+                security_audit_log(SEC_ACT_SYSCALL, PERM_PROC_OP, SEC_AUDIT_FAULT, "term_pid_invalid", (int32_t)arg1);
                 return (uint64_t)-2; /* Invalid PID */
             }
             return (uint64_t)process_terminate((uint32_t)arg1);
 
         default:
+            security_audit_log(SEC_ACT_SYSCALL, PERM_NONE, SEC_AUDIT_FAULT, "unknown_syscall", (int32_t)number);
             return (uint64_t)-1;
     }
 }

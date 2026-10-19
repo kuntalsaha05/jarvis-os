@@ -27,6 +27,7 @@
 #include "drivers/power.h"
 #include "hal/hal.h"
 #include "net/netstack.h"
+#include "security/security.h"
 #include "debug.h"
 
 extern volatile uint64_t timer_ticks;
@@ -316,6 +317,7 @@ void kernel_main(uint64_t magic, uint64_t mb_info_addr)
     pit_init(100);
     ipc_init();
     netstack_init();
+    security_init();
 
     terminal_write("Hardware abstraction invariants: ");
     int hal_res = test_hal_invariants();
@@ -334,6 +336,16 @@ void kernel_main(uint64_t magic, uint64_t mb_info_addr)
     } else {
         terminal_write("FAIL, code ");
         terminal_write_number((uint32_t)(-net_res));
+        terminal_putchar('\n');
+    }
+
+    terminal_write("Security & access invariants: ");
+    int sec_res = test_security_invariants();
+    if (sec_res == 0) {
+        terminal_write("PASS (roles, deny-default, auth tokens, buffer/path validation, audit log)\n");
+    } else {
+        terminal_write("FAIL, code ");
+        terminal_write_number((uint32_t)(-sec_res));
         terminal_putchar('\n');
     }
 

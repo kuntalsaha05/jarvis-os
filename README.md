@@ -110,6 +110,15 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
    - DHCP Client & Fallback (`kernel/net/dhcp.c` / `dhcp.h`): RFC 2131 state machine (`INIT` -> `DISCOVERING` -> `REQUESTING` -> `BOUND` / `FAILED`), message framing with magic cookie `0x63825363`, options parsing, and safe static fallback (`10.0.2.15`, netmask `255.255.255.0`, gateway `10.0.2.2`, DNS `10.0.2.3`).
    - Diagnostic Shell Commands: `ifconfig` / `ip` (interface telemetry), `arp` (ARP cache), `netstat` (protocol stats), `ping <ip>` (ICMP echo probe), and `nettest` (full networking invariant test suite).
 
+10. **Security & Access Control Subsystem (Phase 21)**:
+    - Granular 32-Bit Permission Model (`kernel/security/security.h` / `security.c`): explicit bitmask permissions (`PERM_READ_DIAG`, `PERM_FS_READ`, `PERM_FS_WRITE`, `PERM_PROC_OP`, `PERM_NET_ACCESS`, `PERM_AI_EXEC`, `PERM_ADMIN_OP`) and 5-tier role hierarchy (`ANONYMOUS`, `GUEST`, `USER`, `AI_AGENT`, `ADMIN`) with deny-by-default execution policy.
+    - Transparent Privilege Model Disclosure: explicit disclosure that the kernel operates at CPL 0 / Ring 0 with identity-mapped memory; software access controls provide logical policy boundaries rather than hardware Ring 3 user page isolation.
+    - Constant-Time Elevation Token Authentication: admin privilege escalation requires valid elevation token verified in constant time to thwart timing analysis.
+    - Kernel Boundary Validation: enforces buffer range and wrap-around checks (`security_validate_buffer`), directory traversal sanitization rejecting `..` sequences (`security_validate_path`), and permission gates on syscalls, IPC message queues, and network packet transmission.
+    - Host AI Companion Hardening (`jarvis/tools/registry.py`): strict schema validation, input argument size bounds (1024B arg, 8192B payload, 4096B output), dangerous shell metacharacter regex filters, recursive credential/secret redaction (`[REDACTED]`), and confirmation requirements for destructive operations.
+    - Bounded In-Kernel Circular Audit Buffer: 32-entry static circular ring buffer logging timestamp, role, event type, action (ALLOW/DENY), subsystem, and description with safe FIFO eviction.
+    - Interactive Security Commands: `secstat` (status & telemetry), `whoami` (active principal), `auth <role> [token]` (role switching), and `audit` (security event log inspection).
+
 ---
 
 ## Quickstart
@@ -211,6 +220,10 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 | `netstat` | Display networking protocol packet and byte telemetry counters |
 | `ping <ip>` | Send ICMP Echo Request probe to target IPv4 address |
 | `nettest` | Run complete in-kernel networking stack invariant test suite |
+| `secstat` / `security` | Display security subsystem status, active role, permissions mask, and audit metrics |
+| `whoami` | Display active principal role identifier, name, and elevation state |
+| `auth <role> [token]` | Switch security principal role (`anon`, `guest`, `user`, `ai`, `admin`) |
+| `audit` | Display circular kernel security audit event log |
 | `poweroff` / `shutdown` | Controlled ACPI system poweroff |
 | `reboot` | Controlled CPU reset via 8042 controller |
 | `tests` | Run the complete in-kernel benchmark suite |
@@ -237,6 +250,7 @@ Detailed technical architecture, reports, and design docs are available in `docs
 - [`docs/PRESENTATION_OUTLINE.md`](docs/PRESENTATION_OUTLINE.md): Engineering defense and presentation slide outline with anticipated Q&A.
 
 ### Phase Verification Reports
+- [`docs/PHASE21_SECURITY.md`](docs/PHASE21_SECURITY.md): Phase 21 security and access control, RBAC permissions, kernel boundary hardening, AI tool execution control, and audit log report.
 - [`docs/PHASE20_NETWORKING.md`](docs/PHASE20_NETWORKING.md): Phase 20 modular zero-heap networking stack, Ethernet, ARP, IPv4, ICMP, UDP, and DHCP report.
 - [`docs/PHASE19_HAL.md`](docs/PHASE19_HAL.md): Phase 19 hardware abstraction layer, driver registry, dependencies, and probes report.
 - [`docs/PHASE18_DIAGNOSTICS_RECOVERY.md`](docs/PHASE18_DIAGNOSTICS_RECOVERY.md): Phase 18 system diagnostics, 32-vector exception crash dumps, and controlled recovery report.

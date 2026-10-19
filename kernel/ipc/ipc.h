@@ -16,6 +16,7 @@
 #define IPC_ERR_EMPTY       -2   /* Nonblocking receive from empty queue */
 #define IPC_ERR_TIMEOUT     -3   /* Blocking receive timed out */
 #define IPC_ERR_NOT_OWNER   -4   /* Operation rejected: requester is not queue owner */
+#define IPC_ERR_PERMISSION  -5   /* Operation rejected: missing required permissions */
 
 typedef struct
 {

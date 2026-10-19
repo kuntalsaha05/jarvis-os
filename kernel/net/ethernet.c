@@ -1,4 +1,5 @@
 #include "ethernet.h"
+#include "../security/security.h"
 
 /* Forward protocol handler declarations */
 int arp_handle_packet(net_device_t *dev, const void *payload, uint16_t len);
@@ -126,6 +127,7 @@ int eth_handle_rx(net_device_t *dev, const void *frame, uint16_t frame_len)
     int parse_res = eth_parse_frame(frame, frame_len, &hdr, &payload, &payload_len);
     if (parse_res != NET_OK) {
         dev->stats.rx_errors++;
+        security_audit_log(SEC_ACT_NET_RX, PERM_NET_ACCESS, SEC_AUDIT_FAULT, "malformed_frame", (int32_t)frame_len);
         return parse_res;
     }
 
