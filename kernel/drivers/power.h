@@ -32,3 +32,4 @@ void sys_reboot(void);
 int test_power_invariants(void);
 
 #endif /* POWER_H */
+

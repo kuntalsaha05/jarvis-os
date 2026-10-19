@@ -135,3 +135,4 @@ int test_power_invariants(void)
     if (!disclose || disclose[0] != '[') return -1;
     return 0;
 }
+

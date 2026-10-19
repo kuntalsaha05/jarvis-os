@@ -118,3 +118,4 @@ void diag_print_summary(void);
 int test_diagnostics_invariants(void);
 
 #endif /* DIAGNOSTICS_H */
+

@@ -205,3 +205,4 @@ Captured 2978 bytes of serial output during shutdown.
 1. **Storage Volatility Across Power Cycles**: The filesystem is backed by a 64 KiB volatile RAMDisk (`/dev/ram0`). The controlled shutdown and restart sequences explicitly disclose that file data and saved configurations do not persist across reboots.
 2. **ACPI Hardware Poweroff Scope**: `sys_poweroff` uses standard QEMU and Bochs ACPI PM ports (`0x604`, `0xB004`). Real physical hardware without full ACPI AML/DSDT table parsing will safely halt (`cli; hlt`) with a user-facing prompt to switch off power.
 3. **Unrecoverable Fault Halting**: Kernel faults (page faults on invalid addresses, double faults, general protection faults) deliberately halt the system after printing diagnostic register dumps. The kernel does not attempt to resume execution or hide fatal faults.
+
