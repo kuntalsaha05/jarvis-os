@@ -25,6 +25,7 @@
 #include "gui/desktop.h"
 #include "diagnostics/diagnostics.h"
 #include "drivers/power.h"
+#include "hal/hal.h"
 #include "debug.h"
 
 extern volatile uint64_t timer_ticks;
@@ -306,10 +307,23 @@ void kernel_main(uint64_t magic, uint64_t mb_info_addr)
 
     diag_init();
     power_init();
+    hal_init();
+    hal_register_core_drivers();
+    hal_init_all();
     idt_init();
     pic_init();
     pit_init(100);
     ipc_init();
+
+    terminal_write("Hardware abstraction invariants: ");
+    int hal_res = test_hal_invariants();
+    if (hal_res == 0) {
+        terminal_write("PASS (modular registry, dependencies, fallback, probes)\n");
+    } else {
+        terminal_write("FAIL, code ");
+        terminal_write_number((uint32_t)(-hal_res));
+        terminal_putchar('\n');
+    }
 
     int diag_res = test_diagnostics_invariants();
     terminal_write("Diagnostics & logging invariants: ");

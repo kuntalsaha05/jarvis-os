@@ -48,6 +48,7 @@ def main():
         "ai\n"
         "diag\n"
         "dmesg\n"
+        "hal\n"
     ).encode("utf-8")
 
     start_time = time.time()
@@ -142,8 +143,11 @@ def main():
         ("AI Security 4-Tier Model", "Enforced Security & Permission Model:"),
         ("Diagnostics Invariants Boot", "Diagnostics & logging invariants: PASS"),
         ("Exception Invariants Boot", "Exception handling invariants: PASS"),
+        ("HAL Invariants Boot", "Hardware abstraction invariants: PASS"),
         ("System Diagnostics Shell (diag)", "JARVIS-OS SYSTEM DIAGNOSTICS"),
-        ("Kernel Diagnostic Log (dmesg)", "JARVIS-OS KERNEL DIAGNOSTIC LOG (DMESG)")
+        ("Kernel Diagnostic Log (dmesg)", "JARVIS-OS KERNEL DIAGNOSTIC LOG (DMESG)"),
+        ("HAL Shell Status (hal)", "JARVIS-OS HARDWARE ABSTRACTION LAYER (HAL)"),
+        ("HAL Driver Registry Online", "Registered Drivers: 9 | Online: 9")
     ]
 
 

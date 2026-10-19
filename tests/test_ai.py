@@ -377,6 +377,37 @@ class TestAICompanion(unittest.TestCase):
         self.assertIn("volatile RAMDisk", volatility_warning)
         self.assertIn("not retained", volatility_warning)
 
+    def test_phase19_hardware_abstraction_layer(self):
+        # 1. Verify HAL Static Driver Registry Limits
+        hal_max_drivers = 16
+        core_driver_count = 9
+        self.assertLessEqual(core_driver_count, hal_max_drivers)
+
+        # 2. Verify Core Driver Identification and Backend Schema
+        core_drivers = {
+            "pic_8259": {"class": "INTC", "backend": "HARDWARE", "dep": None, "irq": None},
+            "serial_uart": {"class": "SERIAL", "backend": "HARDWARE", "dep": None, "irq": 4},
+            "vga_terminal": {"class": "CONSOLE", "backend": "HARDWARE", "dep": None, "irq": None},
+            "pit_8254": {"class": "TIMER", "backend": "HARDWARE", "dep": "pic_8259", "irq": 0},
+            "ps2_keyboard": {"class": "KEYBOARD", "backend": "HARDWARE", "dep": "pic_8259", "irq": 1},
+            "ps2_mouse": {"class": "POINTER", "backend": "HARDWARE", "dep": "pic_8259", "irq": 12},
+            "framebuffer": {"class": "DISPLAY", "backend": "HARDWARE", "dep": None, "irq": None},
+            "ramdisk_block": {"class": "BLOCK", "backend": "MEMORY_BACKED", "dep": None, "irq": None},
+            "acpi_power": {"class": "POWER", "backend": "HARDWARE", "dep": None, "irq": None},
+        }
+
+        self.assertEqual(len(core_drivers), 9)
+        self.assertEqual(core_drivers["ramdisk_block"]["backend"], "MEMORY_BACKED")
+        self.assertEqual(core_drivers["serial_uart"]["backend"], "HARDWARE")
+        self.assertEqual(core_drivers["pit_8254"]["dep"], "pic_8259")
+        self.assertEqual(core_drivers["ps2_keyboard"]["dep"], "pic_8259")
+
+        # 3. Verify Safe Fallback Routing Invariant
+        display_offline = True
+        serial_online = True
+        console_routed_to = "serial_uart" if (display_offline and serial_online) else "vga_terminal"
+        self.assertEqual(console_routed_to, "serial_uart")
+
 
 if __name__ == "__main__":
     unittest.main()

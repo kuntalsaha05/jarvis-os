@@ -100,14 +100,19 @@ To ensure absolute transparency and prevent ambiguity, every requirement is tagg
 | **76** | **Bounded Diagnostic Ring-Buffer Event Log (dmesg)** | Real Kernel Mechanism | `kernel/diagnostics/diagnostics.c` | `make test`, `make test-qemu` | **PASS** | 32-entry static circular ring buffer with tick timestamps, severity levels, FIFO overwrite eviction under pressure, and `dmesg` shell inspection. |
 | **77** | **32-Vector Hardware CPU Exception Handling & Serial Crash Dumps** | Real Kernel Mechanism | `kernel/interrupts/idt.c`, `kernel/interrupts/interrupts.S` | `make test` (*Exception Invariants*), `make test-qemu` | **PASS** | Full suite of 32 IDT exception stubs, standardized 176-byte `exception_frame_t`, separate error code alignment, CR2/flag decoding for #PF, detailed COM1 serial crash dumps, and safe panic halting. |
 | **78** | **Controlled ACPI Shutdown & 8042 Reset with Volatile Storage Disclosure** | Real Kernel Mechanism | `kernel/drivers/power.c`, `power.h` | `python3 scripts/qemu_shutdown_test.py`, `make test-shutdown` | **PASS** | Graceful shutdown via QEMU ACPI port 0x604, CPU reset via 8042 keyboard controller (0x64, 0xFE), triple-fault fallback, and explicit RAMDisk volatility warnings. |
+| **79** | **Modular Hardware Abstraction Layer & Driver Registry** | Real Kernel Mechanism | `kernel/hal/hal.c`, `hal.h` | `make test` (*HAL Invariants*), `make test-qemu` | **PASS** | Unified `hal_driver_t` interface, bounded 16-slot static driver registry, zero heap allocation at boot, 9 core driver adapters (PIC, UART, VGA, PIT, Keyboard, Mouse, FB, RAMDisk, Power). |
+| **80** | **Multi-Pass Dependency Resolution Engine** | Real Kernel Mechanism | `kernel/hal/hal.c`, `hal.h` | `make test` (*HAL Invariants*) | **PASS** | Topological multi-pass resolver enforcing driver prerequisites (`pit_8254`, `ps2_keyboard`, `ps2_mouse` requiring `pic_8259`), rejection of unmet dependencies (`HAL_ERR_DEP_UNMET`), and reverse-order shutdown. |
+| **81** | **Non-Destructive Hardware Probes** | Real Kernel Mechanism | `kernel/hal/hal.c` | `make test`, `make test-qemu` | **PASS** | Architecture-specific probes: UART scratchpad register readback (`0x3FF`), 8042 PS/2 controller status check (`0x64`), and Multiboot framebuffer structure validation. |
+| **82** | **Dynamic Console Fallback Routing & Shell Diagnostics** | Real Kernel Mechanism | `kernel/hal/hal.c`, `shell/shell.c` | `make test`, `make test-qemu` | **PASS** | `hal_console_write` dynamically mirrors to VGA and COM1 serial, seamlessly falling back to serial on display absence; interactive shell `hal` command outputs registered driver table with classes, states, and IRQs. |
 
 ---
 
 ## 3. Summary of Verification Status
 
-- **Total Tracked Capabilities**: 78
-- **Verified Complete**: 78 (100%)
+- **Total Tracked Capabilities**: 82
+- **Verified Complete**: 82 (100%)
 - **Failing or Blocked**: 0 (0%)
 - **Simulations Documented & Decoupled**: 8 (All cleanly labeled and isolated from real kernel routines)
 - **Architectural Boundaries Explicitly Documented**: All (Single uniprocessor PIC model, identity-mapped 2 MiB address space, Ring 0 monolithic kernel, RAM disk volatility, software-only 2D rasterizer, and host-side AI execution documented in [`docs/KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)).
+
 

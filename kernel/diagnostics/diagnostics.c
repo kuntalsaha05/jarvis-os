@@ -1,6 +1,7 @@
 #include "diagnostics.h"
 #include "../drivers/terminal.h"
 #include "../debug.h"
+#include "../hal/hal.h"
 
 #ifdef HOST_TEST
 /* In host test mode, timer_ticks is provided by the test runner */
@@ -322,6 +323,9 @@ void diag_get_summary(diag_system_summary_t *out)
     out->log_entries_count = diag_log_count;
     out->log_overflow_count = diag_overflow_count;
     out->log_total_written = diag_total_written;
+
+    out->hal_drivers_registered = hal_get_driver_count();
+    out->hal_drivers_online = hal_get_online_count();
 }
 
 void diag_print_summary(void)
@@ -443,6 +447,13 @@ void diag_print_summary(void)
     terminal_write(" [Queries: ");
     terminal_write_number(s.ai_query_count);
     terminal_write("]\n");
+
+    terminal_write("\n--- Hardware Abstraction Layer (HAL) ---\n");
+    terminal_write("  Registered Drivers:");
+    terminal_write_number(s.hal_drivers_registered);
+    terminal_write(" (Online: ");
+    terminal_write_number(s.hal_drivers_online);
+    terminal_write(")\n");
 
     terminal_write("\n--- Diagnostic Log Status ---\n");
     terminal_write("  Log Entries:       ");

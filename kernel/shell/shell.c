@@ -24,6 +24,7 @@
 #include "gui/desktop.h"
 #include "drivers/power.h"
 #include "diagnostics/diagnostics.h"
+#include "hal/hal.h"
 #include "../debug.h"
 #include <stdint.h>
 
@@ -97,7 +98,10 @@ static void print_help(void)
     terminal_write("  diag       - Show comprehensive system diagnostics & metrics\n");
     terminal_write("  dmesg      - Show kernel ring-buffer diagnostic event log\n");
     terminal_write("  shutdown   - Graceful system shutdown via ACPI/PM poweroff\n");
-    terminal_write("  reboot     - Controlled system reboot via 8042 reset line\n");
+    terminal_write("  reboot     - Controlled system reboot via 8042 reset line\n\n");
+    terminal_write("Hardware Abstraction Layer (Phase 19):\n");
+    terminal_write("  hal        - Display HAL driver registry, state, dependencies & IRQs\n");
+    terminal_write("  devices    - Alias for hal driver status listing\n");
     terminal_write("==================================================\n");
 }
 
@@ -619,6 +623,9 @@ static void execute_command(void)
     }
     else if (cmd_match(command, "reboot") || cmd_match(command, "restart")) {
         sys_reboot();
+    }
+    else if (cmd_match(command, "hal") || cmd_match(command, "devices")) {
+        hal_print_status();
     }
     else if (cmd_match(command, "ai")) {
         print_ai_status();

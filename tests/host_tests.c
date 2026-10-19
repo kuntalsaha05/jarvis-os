@@ -32,6 +32,7 @@
 #include "diagnostics/diagnostics.h"
 #include "drivers/power.h"
 #include "interrupts/idt.h"
+#include "hal/hal.h"
 
 /* Provide stubs for terminal functions when running in host unit test mode */
 void terminal_write(const char *str) {
@@ -68,12 +69,17 @@ int process_unblock(uint32_t pid) {
 void scheduler_yield(void) {
 }
 
+void debug_init(void) { }
 void debug_puts(const char *s) { (void)s; }
 void debug_putchar(char c) { (void)c; }
 void debug_write_hex(uint64_t val) { (void)val; }
 void debug_write_dec(uint64_t val) { (void)val; }
 __attribute__((noreturn)) void kernel_panic(const char *msg) { (void)msg; exit(1); }
+void terminal_initialize(void) { }
+void pic_init(void) { }
 void pic_send_eoi(uint8_t irq) { (void)irq; }
+void pit_init(uint32_t freq) { (void)freq; }
+void keyboard_init(void) { }
 char keyboard_read_char(void) { return 0; }
 void shell_execute(const char *cmd) { (void)cmd; }
 void page_get_stats(page_stats_t *s) {
@@ -913,6 +919,79 @@ static void test_diagnostics_and_recovery_invariants(void)
     printf("PASS\n");
 }
 
+/* ========================================================
+ * 19. Hardware Abstraction Layer (HAL) Invariants
+ * ======================================================== */
+static void test_hal_subsystem_invariants(void)
+{
+    printf("[TEST] Hardware Abstraction Layer (HAL) Modular Registry & Invariants... ");
+
+    /* 1. Test HAL internal invariants (registration, duplicates, dependencies, probes, faults) */
+    int inv_res = test_hal_invariants();
+    assert(inv_res == 0);
+
+    /* 2. Test string converters */
+    assert(hal_class_name(HAL_DEV_CLASS_TIMER) != NULL);
+    assert(hal_class_name(HAL_DEV_CLASS_INTERRUPT_CONTROLLER) != NULL);
+    assert(hal_class_name(HAL_DEV_CLASS_SERIAL) != NULL);
+    assert(hal_class_name(HAL_DEV_CLASS_BLOCK) != NULL);
+    assert(hal_class_name(HAL_DEV_CLASS_POWER) != NULL);
+    assert(hal_state_name(HAL_STATE_ONLINE) != NULL);
+    assert(hal_state_name(HAL_STATE_FAULT) != NULL);
+    assert(hal_backend_name(HAL_BACKEND_HARDWARE) != NULL);
+    assert(hal_backend_name(HAL_BACKEND_MEMORY_BACKED) != NULL);
+
+    /* 3. Test core drivers registration and multi-pass resolution */
+    hal_init();
+    assert(hal_get_driver_count() == 0);
+    assert(hal_get_online_count() == 0);
+
+    hal_register_core_drivers();
+    assert(hal_get_driver_count() == 9);
+
+    /* Verify drivers exist */
+    assert(hal_find_driver("pic_8259") != NULL);
+    assert(hal_find_driver("serial_uart") != NULL);
+    assert(hal_find_driver("vga_terminal") != NULL);
+    assert(hal_find_driver("pit_8254") != NULL);
+    assert(hal_find_driver("ps2_keyboard") != NULL);
+    assert(hal_find_driver("ps2_mouse") != NULL);
+    assert(hal_find_driver("framebuffer") != NULL);
+    assert(hal_find_driver("ramdisk_block") != NULL);
+    assert(hal_find_driver("acpi_power") != NULL);
+
+    /* Multi-pass initialization */
+    int online = hal_init_all();
+    assert(online >= 8); /* Framebuffer may be absent in pure mock host test, but other 8 online */
+    assert(hal_find_driver("pic_8259")->state == HAL_STATE_ONLINE);
+    assert(hal_find_driver("pit_8254")->state == HAL_STATE_ONLINE);
+    assert(hal_find_driver("serial_uart")->state == HAL_STATE_ONLINE);
+    assert(hal_find_driver("vga_terminal")->state == HAL_STATE_ONLINE);
+    assert(hal_find_driver("ramdisk_block")->state == HAL_STATE_ONLINE);
+
+    /* 4. Test unified block read/write through HAL adapter */
+    uint8_t wbuf[512];
+    uint8_t rbuf[512];
+    for (int i = 0; i < 512; i++) {
+        wbuf[i] = (uint8_t)(i ^ 0x5A);
+        rbuf[i] = 0;
+    }
+    assert(hal_block_write(2, 1, wbuf) == 0);
+    assert(hal_block_read(2, 1, rbuf) == 0);
+    for (int i = 0; i < 512; i++) {
+        assert(rbuf[i] == wbuf[i]);
+    }
+
+    /* 5. Test console routing without crashes */
+    hal_console_write("[HOST_TEST] HAL console write test message\n");
+
+    /* 6. Test graceful shutdown in reverse order */
+    assert(hal_shutdown_all() == 0);
+    assert(hal_get_online_count() == 0);
+
+    printf("PASS\n");
+}
+
 int main(void)
 {
     printf("==================================================\n");
@@ -937,6 +1016,7 @@ int main(void)
     test_gui_and_framebuffer_invariants();
     test_stress_and_stability_invariants();
     test_diagnostics_and_recovery_invariants();
+    test_hal_subsystem_invariants();
 
     printf("==================================================\n");
     printf("   ALL HOST UNIT TESTS COMPLETED SUCCESSFULLY!    \n");

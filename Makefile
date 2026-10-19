@@ -52,7 +52,8 @@ OBJECTS = \
 	build/app.o \
 	build/desktop.o \
 	build/diagnostics.o \
-	build/power.o
+	build/power.o \
+	build/hal.o
 
 .PHONY: all clean iso run run-headless test test-ai test-qemu test-gui test-release test-shutdown test-all bench bench-full
 
@@ -187,6 +188,9 @@ build/diagnostics.o: kernel/diagnostics/diagnostics.c | build
 build/power.o: kernel/drivers/power.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
+build/hal.o: kernel/hal/hal.c kernel/hal/hal.h | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
 $(KERNEL): $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
@@ -206,7 +210,7 @@ run-headless: $(ISO)
 
 test:
 	mkdir -p build
-	gcc -O2 -Wall -Wextra -DHOST_TEST -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/memory/heap.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/event.c kernel/gui/wm.c kernel/gui/config.c kernel/gui/notification.c kernel/gui/app.c kernel/gui/desktop.c kernel/interrupts/idt.c kernel/diagnostics/diagnostics.c kernel/drivers/power.c -o build/host_tests
+	gcc -O2 -Wall -Wextra -DHOST_TEST -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/memory/heap.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/event.c kernel/gui/wm.c kernel/gui/config.c kernel/gui/notification.c kernel/gui/app.c kernel/gui/desktop.c kernel/interrupts/idt.c kernel/diagnostics/diagnostics.c kernel/drivers/power.c kernel/hal/hal.c -o build/host_tests
 	./build/host_tests
 
 test-ai:

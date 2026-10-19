@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #define JARVIS_KERNEL_NAME    "JARVIS-OS"
-#define JARVIS_KERNEL_VERSION "0.18.0"
+#define JARVIS_KERNEL_VERSION "0.19.0"
 #define JARVIS_KERNEL_ARCH    "x86_64"
 #define JARVIS_KERNEL_MODE    "Ring 0 Monolithic"
 
@@ -88,6 +88,10 @@ typedef struct {
     const char *ai_protocol_version;
     const char *ai_status;
     uint32_t ai_query_count;
+
+    /* Hardware Abstraction Layer stats */
+    uint32_t hal_drivers_registered;
+    uint32_t hal_drivers_online;
 
     /* Log Buffer stats */
     uint32_t log_entries_count;

@@ -90,6 +90,15 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
    - Transparent Volatile Storage Disclosure: power management operations explicitly warn that storage is backed by a volatile RAMDisk (`/dev/ram0`), ensuring clear operational boundaries.
    - Component-Independent Recovery: GUI application failure cleanly resets app state to `APP_STATE_STOPPED` without desktop panics, desktop exit restores text console shell, and AI companion disconnection falls back to offline simulation safely.
 
+8. **Hardware Abstraction Layer (HAL) & Modular Device Registry (Phase 19)**:
+   - Unified Driver Interface (`kernel/hal/hal.c` / `hal.h`): standardizes device access, capabilities (`READ`, `WRITE`, `INTERRUPT`, `SEEK`, `DMA`, `POWER_MGMT`, `GRAPHICS`, `FALLBACK`), and lifecycle states (`REGISTERED`, `INITIALIZING`, `ONLINE`, `OFFLINE`, `FAULT`).
+   - Bounded Static Registry: strictly avoids dynamic memory allocation during boot, supporting up to 16 statically registered drivers (`HAL_MAX_DRIVERS = 16`).
+   - 9 Core Driver Adapters: Dual 8259 PIC (`pic_8259`), 16550 UART Serial (`serial_uart`), VGA 80x25 Console (`vga_terminal`), 8254 PIT Timer (`pit_8254`), 8042 PS/2 Keyboard (`ps2_keyboard`), PS/2 Mouse (`ps2_mouse`), Linear Framebuffer (`framebuffer`), RAMDisk Block Device (`ramdisk_block`), and ACPI Power Controller (`acpi_power`).
+   - Multi-Pass Dependency Resolution: topological dependency engine resolving prerequisites (`pit_8254`, `ps2_keyboard`, and `ps2_mouse` requiring `pic_8259` to be online), enforcing dependency order, rejecting unmet dependencies (`HAL_ERR_DEP_UNMET`), and shutting down in reverse order.
+   - Non-Destructive Hardware Probes: architecture-safe probing via UART scratchpad register readback (`0x3FF`), 8042 PS/2 controller status check (`0x64`), and Multiboot framebuffer structure validation without unbacked PCI/ACPI claims.
+   - Console Fallback Routing: `hal_console_write` dynamically mirrors to VGA and COM1 serial, falling back to serial if the display is offline or uninitialized.
+   - Interactive Shell Status (`hal` / `devices`): displays formatted driver table with unique identifiers, device classes, operational states, physical backends, dependencies, and IRQ allocations.
+
 ---
 
 ## Quickstart
@@ -207,6 +216,7 @@ Detailed technical architecture, reports, and design docs are available in `docs
 - [`docs/PRESENTATION_OUTLINE.md`](docs/PRESENTATION_OUTLINE.md): Engineering defense and presentation slide outline with anticipated Q&A.
 
 ### Phase Verification Reports
+- [`docs/PHASE19_HAL.md`](docs/PHASE19_HAL.md): Phase 19 hardware abstraction layer, driver registry, dependencies, and probes report.
 - [`docs/PHASE18_DIAGNOSTICS_RECOVERY.md`](docs/PHASE18_DIAGNOSTICS_RECOVERY.md): Phase 18 system diagnostics, 32-vector exception crash dumps, and controlled recovery report.
 - [`docs/PHASE17_SETTINGS_NOTIFICATIONS.md`](docs/PHASE17_SETTINGS_NOTIFICATIONS.md): Phase 17 modular system settings application, configuration schema v2, and bounded notification subsystem report.
 - [`docs/PHASE16_AI_DESKTOP.md`](docs/PHASE16_AI_DESKTOP.md): Phase 16 AI desktop experience, live kernel telemetry, and allowlist sandbox security report.
