@@ -46,6 +46,8 @@ def main():
         "files\n"
         "syscall\n"
         "ai\n"
+        "diag\n"
+        "dmesg\n"
     ).encode("utf-8")
 
     start_time = time.time()
@@ -137,7 +139,11 @@ def main():
         ("Filesystem Invariants Shell", "JARVIS-FS Invariants:    PASS"),
         ("Block Device Invariants Shell", "Block Device Invariants: PASS"),
         ("AI Status Shell Command", "JARVIS AI ARCHITECTURE STATUS"),
-        ("AI Security 4-Tier Model", "Enforced Security & Permission Model:")
+        ("AI Security 4-Tier Model", "Enforced Security & Permission Model:"),
+        ("Diagnostics Invariants Boot", "Diagnostics & logging invariants: PASS"),
+        ("Exception Invariants Boot", "Exception handling invariants: PASS"),
+        ("System Diagnostics Shell (diag)", "JARVIS-OS SYSTEM DIAGNOSTICS"),
+        ("Kernel Diagnostic Log (dmesg)", "JARVIS-OS KERNEL DIAGNOSTIC LOG (DMESG)")
     ]
 
 

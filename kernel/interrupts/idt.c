@@ -3,15 +3,127 @@
 #include "process/scheduler.h"
 #include "../debug.h"
 
-extern void page_fault_stub(void);
+#include "../diagnostics/diagnostics.h"
+
 extern void terminal_write(const char *text);
+extern void terminal_putchar(char c);
+
+#ifndef HOST_TEST
 extern void interrupt_stub(void);
 extern void timer_stub(void);
 extern void schedule_stub(void);
-extern void generic_exception_stub(void);
 extern void syscall_stub(void);
 extern void keyboard_stub(void);
 extern void mouse_stub(void);
+#else
+void interrupt_stub(void) {}
+void timer_stub(void) {}
+void schedule_stub(void) {}
+void syscall_stub(void) {}
+void keyboard_stub(void) {}
+void mouse_stub(void) {}
+#endif
+
+#ifndef HOST_TEST
+extern void isr_exc_0(void);
+extern void isr_exc_1(void);
+extern void isr_exc_2(void);
+extern void isr_exc_3(void);
+extern void isr_exc_4(void);
+extern void isr_exc_5(void);
+extern void isr_exc_6(void);
+extern void isr_exc_7(void);
+extern void isr_exc_8(void);
+extern void isr_exc_9(void);
+extern void isr_exc_10(void);
+extern void isr_exc_11(void);
+extern void isr_exc_12(void);
+extern void isr_exc_13(void);
+extern void isr_exc_14(void);
+extern void isr_exc_15(void);
+extern void isr_exc_16(void);
+extern void isr_exc_17(void);
+extern void isr_exc_18(void);
+extern void isr_exc_19(void);
+extern void isr_exc_20(void);
+extern void isr_exc_21(void);
+extern void isr_exc_22(void);
+extern void isr_exc_23(void);
+extern void isr_exc_24(void);
+extern void isr_exc_25(void);
+extern void isr_exc_26(void);
+extern void isr_exc_27(void);
+extern void isr_exc_28(void);
+extern void isr_exc_29(void);
+extern void isr_exc_30(void);
+extern void isr_exc_31(void);
+
+static void (* const isr_exc_table[32])(void) = {
+    isr_exc_0, isr_exc_1, isr_exc_2, isr_exc_3,
+    isr_exc_4, isr_exc_5, isr_exc_6, isr_exc_7,
+    isr_exc_8, isr_exc_9, isr_exc_10, isr_exc_11,
+    isr_exc_12, isr_exc_13, isr_exc_14, isr_exc_15,
+    isr_exc_16, isr_exc_17, isr_exc_18, isr_exc_19,
+    isr_exc_20, isr_exc_21, isr_exc_22, isr_exc_23,
+    isr_exc_24, isr_exc_25, isr_exc_26, isr_exc_27,
+    isr_exc_28, isr_exc_29, isr_exc_30, isr_exc_31
+};
+#else
+static void dummy_exc(void) {}
+static void (* const isr_exc_table[32])(void) = {
+    dummy_exc, dummy_exc, dummy_exc, dummy_exc,
+    dummy_exc, dummy_exc, dummy_exc, dummy_exc,
+    dummy_exc, dummy_exc, dummy_exc, dummy_exc,
+    dummy_exc, dummy_exc, dummy_exc, dummy_exc,
+    dummy_exc, dummy_exc, dummy_exc, dummy_exc,
+    dummy_exc, dummy_exc, dummy_exc, dummy_exc,
+    dummy_exc, dummy_exc, dummy_exc, dummy_exc,
+    dummy_exc, dummy_exc, dummy_exc, dummy_exc
+};
+#endif
+
+static const char * const exception_names[32] = {
+    "#DE Divide Error",
+    "#DB Debug Exception",
+    "NMI Non-Maskable Interrupt",
+    "#BP Breakpoint",
+    "#OF Overflow",
+    "#BR Bound Range Exceeded",
+    "#UD Invalid Opcode",
+    "#NM Device Not Available",
+    "#DF Double Fault",
+    "Coprocessor Segment Overrun",
+    "#TS Invalid TSS",
+    "#NP Segment Not Present",
+    "#SS Stack-Segment Fault",
+    "#GP General Protection Fault",
+    "#PF Page Fault",
+    "Reserved Exception (#15)",
+    "#MF x87 Floating-Point Exception",
+    "#AC Alignment Check",
+    "#MC Machine Check",
+    "#XM SIMD Floating-Point Exception",
+    "#VE Virtualization Exception",
+    "#CP Control Protection Exception",
+    "Reserved Exception (#22)",
+    "Reserved Exception (#23)",
+    "Reserved Exception (#24)",
+    "Reserved Exception (#25)",
+    "Reserved Exception (#26)",
+    "Reserved Exception (#27)",
+    "Reserved Exception (#28)",
+    "Reserved Exception (#29)",
+    "Security Exception (#30)",
+    "Reserved Exception (#31)"
+};
+
+const char *exception_name(uint64_t vector)
+{
+    if (vector < 32) {
+        return exception_names[vector];
+    }
+    return "Unknown Exception";
+}
 
 void interrupt_handler(void)
 {
@@ -24,7 +136,9 @@ void generic_exception_handler(uint64_t *frame)
     kernel_panic("Fatal CPU Exception");
 }
 
+#ifndef HOST_TEST
 volatile uint64_t timer_ticks = 0;
+#endif
 
 struct idt_entry
 {
@@ -155,6 +269,99 @@ int test_page_fault_diagnostics(void)
     return 0;
 }
 
+void c_exception_handler(exception_frame_t *frame, uint64_t cr2)
+{
+    __asm__ volatile ("cli");
+
+    if (!frame) {
+        kernel_panic("Fatal CPU Exception: NULL Frame");
+    }
+
+    diag_record_irq((uint8_t)frame->vector);
+
+    const char *name = exception_name(frame->vector);
+    diag_log(DIAG_LEVEL_PANIC, "EXCEPTION", name);
+
+    /* Serial crash dump over early COM1 port */
+    debug_puts("\n\n========================================\n");
+    debug_puts("      CPU EXCEPTION CRASH DUMP          \n");
+    debug_puts("========================================\n");
+    debug_puts("Exception:  ");
+    debug_puts(name);
+    debug_puts(" (Vector ");
+    debug_write_dec(frame->vector);
+    debug_puts(")\n");
+
+    debug_puts("Fault RIP:  ");
+    debug_write_hex(frame->rip);
+    debug_puts(" (CS: ");
+    debug_write_hex(frame->cs);
+    debug_puts(")\n");
+
+    debug_puts("Error Code: ");
+    debug_write_hex(frame->error_code);
+    debug_puts("\n");
+
+    debug_puts("RFLAGS:     ");
+    debug_write_hex(frame->rflags);
+    debug_puts("\n");
+
+    debug_puts("Fault RSP:  ");
+    debug_write_hex(frame->rsp);
+    debug_puts(" (SS: ");
+    debug_write_hex(frame->ss);
+    debug_puts(")\n");
+
+    if (frame->vector == 14) {
+        debug_puts("CR2 (Fault):");
+        debug_write_hex(cr2);
+        debug_puts("\n");
+
+        page_fault_info_t pf_info;
+        page_fault_decode(cr2, frame->error_code, &pf_info);
+        debug_puts("PF Reason:  ");
+        debug_puts(pf_info.is_present ? "Protection Violation (" : "Page Not Present (");
+        debug_puts(pf_info.is_write ? "Write, " : "Read, ");
+        debug_puts(pf_info.is_user ? "User Mode, " : "Supervisor Mode, ");
+        debug_puts(pf_info.is_instruction_fetch ? "Inst Fetch)\n" : "Data Access)\n");
+        debug_puts("PF Region:  ");
+        debug_puts(pf_info.is_mapped_region ? "Identity Mapped 2 MiB Boundary\n" : "Unmapped Memory Space\n");
+    }
+
+    debug_puts("General Registers:\n");
+    debug_puts("  RAX: "); debug_write_hex(frame->rax);
+    debug_puts("  RBX: "); debug_write_hex(frame->rbx);
+    debug_puts("\n  RCX: "); debug_write_hex(frame->rcx);
+    debug_puts("  RDX: "); debug_write_hex(frame->rdx);
+    debug_puts("\n  RSI: "); debug_write_hex(frame->rsi);
+    debug_puts("  RDI: "); debug_write_hex(frame->rdi);
+    debug_puts("\n  RBP: "); debug_write_hex(frame->rbp);
+    debug_puts("  R8:  "); debug_write_hex(frame->r8);
+    debug_puts("\n  R9:  "); debug_write_hex(frame->r9);
+    debug_puts("  R10: "); debug_write_hex(frame->r10);
+    debug_puts("\n  R11: "); debug_write_hex(frame->r11);
+    debug_puts("  R12: "); debug_write_hex(frame->r12);
+    debug_puts("\n  R13: "); debug_write_hex(frame->r13);
+    debug_puts("  R14: "); debug_write_hex(frame->r14);
+    debug_puts("\n  R15: "); debug_write_hex(frame->r15);
+    debug_puts("\n========================================\n");
+
+    /* Also print summary to VGA console if in text mode */
+    terminal_write("\n[KERNEL PANIC] CPU Exception: ");
+    terminal_write(name);
+    terminal_write("\nFaulting RIP: ");
+    write_hex64(frame->rip);
+    terminal_write(" Error: ");
+    write_hex64(frame->error_code);
+    terminal_putchar('\n');
+
+    if (frame->vector == 14) {
+        page_fault_diagnose(cr2, frame->error_code);
+    }
+
+    kernel_panic(name);
+}
+
 __attribute__((noreturn))
 void page_fault_handler(uint64_t address, uint64_t error_code)
 {
@@ -166,6 +373,14 @@ void page_fault_handler(uint64_t address, uint64_t error_code)
     kernel_panic("Kernel Page Fault (#PF)");
 }
 
+int test_exception_invariants(void)
+{
+    if (sizeof(exception_frame_t) != 176) return -1;
+    if (exception_names[0][1] != 'D') return -2;
+    if (exception_names[13][1] != 'G') return -3;
+    if (exception_names[14][1] != 'P') return -4;
+    return test_page_fault_diagnostics();
+}
 
 void idt_init(void)
 {
@@ -182,23 +397,13 @@ void idt_init(void)
     
     for (int i = 0; i < 32; i++)
     {
-        if (i != 14)
-        {
-            idt_set_gate(
-                (uint8_t)i,
-                (uint64_t)generic_exception_stub,
-                0x08,
-                0x8E
-            );
-        }
+        idt_set_gate(
+            (uint8_t)i,
+            (uint64_t)isr_exc_table[i],
+            0x08,
+            0x8E
+        );
     }
-
-    idt_set_gate(
-        14,
-        (uint64_t)page_fault_stub,
-        0x08,
-        0x8E
-    );
 
     idt_set_gate(
         32,

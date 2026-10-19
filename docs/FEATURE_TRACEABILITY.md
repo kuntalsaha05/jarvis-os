@@ -91,17 +91,22 @@ To ensure absolute transparency and prevent ambiguity, every requirement is tagg
 | **67** | **Interactive AI Desktop Companion Window** | Real Kernel Mechanism | `kernel/gui/desktop.c`, `desktop.h` | `make test` (*Desktop Invariants*), `make test-gui` | **PASS** | 24-line circular history, cyan user queries, prompt box with cursor, 3-tier header status banner. |
 | **68** | **Direct Kernel Subsystem Telemetry Queries** | Real Kernel Mechanism | `kernel/gui/desktop.c`, `page.c`, `scheduler.c`, `fs.c` | `make test` (*AI Subsystem Queries*) | **PASS** | Live introspection of `timer_ticks`, `page_get_stats`, `scheduler_get_stats`, `fs_get_inode` via `/status`, `/memory`, `/sched`, `/files`. |
 | **69** | **Interactive Privileged & Destructive Authorization Gating** | Real Kernel Mechanism & Host AI | `kernel/gui/desktop.c`, `jarvis/agent/agent.py` | `make test` & `make test-ai` | **PASS** | Privileged (`/panic`) and destructive (`/format`) actions gated behind user confirmation (`/confirm <action>`); arbitrary tool execution rejected. |
+| **70** | **Data Provenance & Disconnected Transport Resilience** | Real Kernel Mechanism & Host AI | `kernel/gui/desktop.c`, `jarvis/tools/registry.py` | `make test-ai` | **PASS** | Transparent labeling (`[LIVE_KERNEL]` vs `[HOST_AI_MODEL]`); graceful fallback to `OFFLINE_FALLBACK` when disconnected. |
 | **71** | **Modular System Settings Application** | Real Kernel Mechanism | `kernel/gui/desktop.c`, `desktop.h`, `app.h` | `make test-gui` (Settings window screendump), `make test` | **PASS** | Dedicated Settings window (`APP_ID_SETTINGS = 6`) with 6 modular tabs (Display, Appearance, Input, Audio, AI Backend, System Info) and keyboard navigation (`1`-`6`, `Tab`). |
 | **72** | **Versioned Configuration Schema v2 & Checksum Integrity** | Real Kernel Mechanism | `kernel/gui/config.c`, `config.h` | `make test` (*Desktop Config Invariants*) | **PASS** | Extended `desktop_config_t` with mouse sensitivity, notification timeout, AI backend preference; strictly validates hardware constraints and calculates checksum. |
 | **73** | **Bounded Notification Queue with Overflow Eviction** | Real Kernel Mechanism | `kernel/gui/notification.c`, `notification.h` | `make test` (*Notification Subsystem Invariants*) | **PASS** | Ring-buffered queue capped at 8 notifications; oldest non-critical eviction under pressure; tick-based timeout expiration; dropped notification accounting. |
 | **74** | **Non-Blocking Visual Toast Popups & Taskbar Tray** | Real Kernel Mechanism | `kernel/gui/desktop.c`, `notification.c` | `make test-gui`, `make test` (*Desktop Invariants*) | **PASS** | Semi-transparent toast overlays in top-right screen margin with severity borders; dismiss button `[X]`; top-bar unread badge `[Notifs: N]`; zero-stall event loop processing. |
+| **75** | **Centralized System Diagnostics & Telemetry** | Real Kernel Mechanism | `kernel/diagnostics/diagnostics.c`, `diagnostics.h` | `make test` (*Diagnostics Invariants*), `make test-qemu` | **PASS** | Aggregates IRQ counters (IRQ0/1/12, syscalls, yields, faults), scheduler switches, frame/heap metrics, and FS ops/errors/rollbacks via `diag` shell command. |
+| **76** | **Bounded Diagnostic Ring-Buffer Event Log (dmesg)** | Real Kernel Mechanism | `kernel/diagnostics/diagnostics.c` | `make test`, `make test-qemu` | **PASS** | 32-entry static circular ring buffer with tick timestamps, severity levels, FIFO overwrite eviction under pressure, and `dmesg` shell inspection. |
+| **77** | **32-Vector Hardware CPU Exception Handling & Serial Crash Dumps** | Real Kernel Mechanism | `kernel/interrupts/idt.c`, `kernel/interrupts/interrupts.S` | `make test` (*Exception Invariants*), `make test-qemu` | **PASS** | Full suite of 32 IDT exception stubs, standardized 176-byte `exception_frame_t`, separate error code alignment, CR2/flag decoding for #PF, detailed COM1 serial crash dumps, and safe panic halting. |
+| **78** | **Controlled ACPI Shutdown & 8042 Reset with Volatile Storage Disclosure** | Real Kernel Mechanism | `kernel/drivers/power.c`, `power.h` | `python3 scripts/qemu_shutdown_test.py`, `make test-shutdown` | **PASS** | Graceful shutdown via QEMU ACPI port 0x604, CPU reset via 8042 keyboard controller (0x64, 0xFE), triple-fault fallback, and explicit RAMDisk volatility warnings. |
 
 ---
 
 ## 3. Summary of Verification Status
 
-- **Total Tracked Capabilities**: 74
-- **Verified Complete**: 74 (100%)
+- **Total Tracked Capabilities**: 78
+- **Verified Complete**: 78 (100%)
 - **Failing or Blocked**: 0 (0%)
 - **Simulations Documented & Decoupled**: 8 (All cleanly labeled and isolated from real kernel routines)
 - **Architectural Boundaries Explicitly Documented**: All (Single uniprocessor PIC model, identity-mapped 2 MiB address space, Ring 0 monolithic kernel, RAM disk volatility, software-only 2D rasterizer, and host-side AI execution documented in [`docs/KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)).

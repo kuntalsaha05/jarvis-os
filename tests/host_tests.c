@@ -29,6 +29,9 @@
 #include "gui/config.h"
 #include "gui/notification.h"
 #include "gui/app.h"
+#include "diagnostics/diagnostics.h"
+#include "drivers/power.h"
+#include "interrupts/idt.h"
 
 /* Provide stubs for terminal functions when running in host unit test mode */
 void terminal_write(const char *str) {
@@ -66,6 +69,10 @@ void scheduler_yield(void) {
 }
 
 void debug_puts(const char *s) { (void)s; }
+void debug_putchar(char c) { (void)c; }
+void debug_write_hex(uint64_t val) { (void)val; }
+void debug_write_dec(uint64_t val) { (void)val; }
+__attribute__((noreturn)) void kernel_panic(const char *msg) { (void)msg; exit(1); }
 void pic_send_eoi(uint8_t irq) { (void)irq; }
 char keyboard_read_char(void) { return 0; }
 void shell_execute(const char *cmd) { (void)cmd; }
@@ -843,6 +850,69 @@ static void test_stress_and_stability_invariants(void)
     printf("PASS\n");
 }
 
+/* ========================================================
+ * 18. Diagnostics, Logging, Exceptions & Recovery Invariants
+ * ======================================================== */
+static void test_diagnostics_and_recovery_invariants(void)
+{
+    printf("[TEST] Diagnostics, Ring-Buffer Logging, Exceptions & Recovery... ");
+
+    /* 1. Test bounded diagnostics and logging invariants */
+    int diag_res = test_diagnostics_invariants();
+    assert(diag_res == 0);
+
+    /* 2. Test 32-vector exception invariants, frame size, and page fault decoding */
+    int exc_res = test_exception_invariants();
+    assert(exc_res == 0);
+
+    /* Verify exception names across edge cases */
+    assert(exception_name(0) != NULL);
+    assert(exception_name(13) != NULL);
+    assert(exception_name(14) != NULL);
+    assert(exception_name(31) != NULL);
+    assert(exception_name(32) != NULL); /* Unknown exception */
+
+    /* 3. Test power management invariants and volatile storage disclosure */
+    int pwr_res = test_power_invariants();
+    assert(pwr_res == 0);
+
+    /* 4. Test heap telemetry tracking */
+    heap_init();
+    heap_stats_t hstats;
+    heap_get_stats(&hstats);
+    assert(hstats.total_size == KERNEL_HEAP_SIZE);
+    assert(hstats.alloc_count == 0);
+    assert(hstats.free_count == 0);
+    assert(hstats.used_bytes == 0);
+    assert(hstats.free_bytes > 0);
+
+    void *p = kmalloc(256);
+    assert(p != NULL);
+    heap_get_stats(&hstats);
+    assert(hstats.alloc_count == 1);
+    assert(hstats.used_bytes >= 256);
+
+    kfree(p);
+    heap_get_stats(&hstats);
+    assert(hstats.free_count == 1);
+    assert(hstats.used_bytes == 0);
+
+    /* 5. Test filesystem operation statistics */
+    uint32_t ops = 0, errs = 0, rolls = 0;
+    fs_get_stats(&ops, &errs, &rolls);
+    /* Ops counter must be accessible without faults */
+    (void)ops; (void)errs; (void)rolls;
+
+    /* 6. Verify comprehensive system diagnostic summary */
+    diag_system_summary_t summary;
+    diag_get_summary(&summary);
+    assert(summary.kernel_version != NULL);
+    assert(summary.arch != NULL);
+    assert(summary.log_entries_count <= DIAG_LOG_CAPACITY);
+
+    printf("PASS\n");
+}
+
 int main(void)
 {
     printf("==================================================\n");
@@ -866,6 +936,7 @@ int main(void)
     test_file_alloc_and_disk_sched_invariants_host();
     test_gui_and_framebuffer_invariants();
     test_stress_and_stability_invariants();
+    test_diagnostics_and_recovery_invariants();
 
     printf("==================================================\n");
     printf("   ALL HOST UNIT TESTS COMPLETED SUCCESSFULLY!    \n");

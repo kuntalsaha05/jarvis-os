@@ -24,6 +24,9 @@ static size_t align_size(size_t size)
            ~(size_t)(HEAP_ALIGNMENT - 1);
 }
 
+static size_t heap_alloc_count = 0;
+static size_t heap_free_count = 0;
+
 void heap_init(void)
 {
     first_block = (heap_block_t *)kernel_heap;
@@ -32,6 +35,8 @@ void heap_init(void)
     first_block->free = 1;
     first_block->next = NULL;
     heap_initialized = 1;
+    heap_alloc_count = 0;
+    heap_free_count = 0;
 }
 
 void *kmalloc(size_t size)
@@ -65,6 +70,7 @@ void *kmalloc(size_t size)
             }
 
             block->free = 0;
+            heap_alloc_count++;
             return (void *)(block + 1);
         }
 
@@ -99,6 +105,7 @@ void kfree(void *ptr)
     }
 
     block->free = 1;
+    heap_free_count++;
 
     heap_block_t *current = first_block;
 
@@ -114,5 +121,35 @@ void kfree(void *ptr)
         {
             current = current->next;
         }
+    }
+}
+
+void heap_get_stats(heap_stats_t *stats)
+{
+    if (!stats) return;
+    stats->total_size = KERNEL_HEAP_SIZE;
+    stats->used_bytes = 0;
+    stats->free_bytes = 0;
+    stats->total_blocks = 0;
+    stats->free_blocks = 0;
+    stats->largest_free_chunk = 0;
+    stats->alloc_count = heap_alloc_count;
+    stats->free_count = heap_free_count;
+
+    if (!heap_initialized || !first_block) return;
+
+    heap_block_t *current = first_block;
+    while (current != NULL) {
+        stats->total_blocks++;
+        if (current->free) {
+            stats->free_blocks++;
+            stats->free_bytes += current->size;
+            if (current->size > stats->largest_free_chunk) {
+                stats->largest_free_chunk = current->size;
+            }
+        } else {
+            stats->used_bytes += current->size;
+        }
+        current = current->next;
     }
 }

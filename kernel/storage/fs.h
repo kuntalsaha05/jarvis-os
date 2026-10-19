@@ -65,6 +65,7 @@ int fs_init(void);
 int fs_format(void);
 int fs_get_info(fs_info_t *info);
 int fs_get_inode(uint32_t idx, fs_inode_t *out_node);
+void fs_get_stats(uint32_t *ops, uint32_t *errors, uint32_t *rollbacks);
 
 /* File Operations */
 int fs_create(const char *name);

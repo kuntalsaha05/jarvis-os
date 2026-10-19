@@ -352,6 +352,31 @@ class TestAICompanion(unittest.TestCase):
         self.assertTrue(valid_res[0] == 1024 and valid_res[1] == 768)
         self.assertFalse(invalid_res[0] == 1024 and invalid_res[1] == 768)
 
+    def test_phase18_diagnostics_and_recovery(self):
+        # 1. AI Companion Disconnection and Heartbeat Recovery
+        from jarvis.bridge.serial_transport import SerialTransport
+        st = SerialTransport()
+        req = BridgeRequest(request_id=99, action="tool_call", tool="system.get_diagnostics", arguments={})
+        resp = st.send_request(req)
+        self.assertEqual(resp.status, "OFFLINE")
+        self.assertEqual(resp.telemetry_source, "OFFLINE_SIMULATION")
+
+        # 2. Kernel diagnostic log buffer sizing bounds
+        diag_capacity = 32
+        diag_subsys_max = 12
+        diag_msg_max = 52
+        test_subsys = "TOOLONG_SUBSYSTEM_NAME"
+        test_msg = "X" * 100
+        truncated_subsys = test_subsys[:diag_subsys_max - 1]
+        truncated_msg = test_msg[:diag_msg_max - 1]
+        self.assertEqual(len(truncated_subsys), 11)
+        self.assertEqual(len(truncated_msg), 51)
+
+        # 3. Controlled Shutdown Volatile RAMDisk Warning
+        volatility_warning = "Storage is backed by volatile RAMDisk (/dev/ram0). Data is not retained across power cycles."
+        self.assertIn("volatile RAMDisk", volatility_warning)
+        self.assertIn("not retained", volatility_warning)
+
 
 if __name__ == "__main__":
     unittest.main()

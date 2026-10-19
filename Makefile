@@ -50,9 +50,11 @@ OBJECTS = \
 	build/config.o \
 	build/notification.o \
 	build/app.o \
-	build/desktop.o
+	build/desktop.o \
+	build/diagnostics.o \
+	build/power.o
 
-.PHONY: all clean iso run run-headless test test-ai test-all bench bench-full
+.PHONY: all clean iso run run-headless test test-ai test-qemu test-gui test-release test-shutdown test-all bench bench-full
 
 all: $(KERNEL)
 
@@ -179,6 +181,12 @@ build/app.o: kernel/gui/app.c | build
 build/desktop.o: kernel/gui/desktop.c | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
+build/diagnostics.o: kernel/diagnostics/diagnostics.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/power.o: kernel/drivers/power.c | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
 $(KERNEL): $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
@@ -198,9 +206,8 @@ run-headless: $(ISO)
 
 test:
 	mkdir -p build
-	gcc -O2 -Wall -Wextra -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/memory/heap.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/event.c kernel/gui/wm.c kernel/gui/config.c kernel/gui/notification.c kernel/gui/app.c kernel/gui/desktop.c -o build/host_tests
+	gcc -O2 -Wall -Wextra -DHOST_TEST -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/memory/heap.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/event.c kernel/gui/wm.c kernel/gui/config.c kernel/gui/notification.c kernel/gui/app.c kernel/gui/desktop.c kernel/interrupts/idt.c kernel/diagnostics/diagnostics.c kernel/drivers/power.c -o build/host_tests
 	./build/host_tests
-
 
 test-ai:
 	python3 -m unittest discover -s tests -p "test_*.py"
@@ -214,7 +221,10 @@ test-gui: $(ISO)
 test-release: $(ISO)
 	python3 scripts/validate_release_workflow.py
 
-test-all: test test-ai test-qemu test-gui test-release bench
+test-shutdown: $(ISO)
+	python3 scripts/qemu_shutdown_test.py
+
+test-all: test test-ai test-qemu test-gui test-shutdown test-release bench
 
 bench:
 	mkdir -p build

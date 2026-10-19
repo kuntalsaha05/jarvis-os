@@ -127,43 +127,74 @@ syscall_stub:
     RESTORE_REGISTERS
     iretq
 
-.global generic_exception_stub
-.extern generic_exception_handler
+.extern c_exception_handler
 
-generic_exception_stub:
+.macro EXCEPTION_NO_ERR vec
+.global isr_exc_\vec
+isr_exc_\vec:
     cld
+    pushq $0
+    pushq $\vec
+    jmp common_exception_entry
+.endm
+
+.macro EXCEPTION_ERR vec
+.global isr_exc_\vec
+isr_exc_\vec:
+    cld
+    pushq $\vec
+    jmp common_exception_entry
+.endm
+
+EXCEPTION_NO_ERR 0   # #DE Divide Error
+EXCEPTION_NO_ERR 1   # #DB Debug
+EXCEPTION_NO_ERR 2   # NMI
+EXCEPTION_NO_ERR 3   # #BP Breakpoint
+EXCEPTION_NO_ERR 4   # #OF Overflow
+EXCEPTION_NO_ERR 5   # #BR Bound Range Exceeded
+EXCEPTION_NO_ERR 6   # #UD Invalid Opcode
+EXCEPTION_NO_ERR 7   # #NM Device Not Available
+EXCEPTION_ERR    8   # #DF Double Fault
+EXCEPTION_NO_ERR 9   # Coprocessor Segment Overrun
+EXCEPTION_ERR    10  # #TS Invalid TSS
+EXCEPTION_ERR    11  # #NP Segment Not Present
+EXCEPTION_ERR    12  # #SS Stack Fault
+EXCEPTION_ERR    13  # #GP General Protection
+EXCEPTION_ERR    14  # #PF Page Fault
+EXCEPTION_NO_ERR 15  # Reserved
+EXCEPTION_NO_ERR 16  # #MF x87 FPU Floating-Point
+EXCEPTION_ERR    17  # #AC Alignment Check
+EXCEPTION_NO_ERR 18  # #MC Machine Check
+EXCEPTION_NO_ERR 19  # #XM SIMD Floating-Point
+EXCEPTION_NO_ERR 20  # #VE Virtualization
+EXCEPTION_ERR    21  # #CP Control Protection
+EXCEPTION_NO_ERR 22
+EXCEPTION_NO_ERR 23
+EXCEPTION_NO_ERR 24
+EXCEPTION_NO_ERR 25
+EXCEPTION_NO_ERR 26
+EXCEPTION_NO_ERR 27
+EXCEPTION_NO_ERR 28
+EXCEPTION_NO_ERR 29
+EXCEPTION_NO_ERR 30
+EXCEPTION_NO_ERR 31
+
+common_exception_entry:
     SAVE_REGISTERS
+    movq %rsp, %rdi         # 1st arg: exception_frame_t *
+    movq %cr2, %rsi         # 2nd arg: cr2 (fault address)
     movq %rsp, %r12
-    movq %rsp, %rdi
-    andq $-16, %rsp
-    call generic_exception_handler
+    andq $-16, %rsp         # 16-byte stack alignment
+    call c_exception_handler
     movq %r12, %rsp
     RESTORE_REGISTERS
+    addq $16, %rsp          # pop vector and error_code
     iretq
+
+.global generic_exception_stub
+generic_exception_stub:
+    jmp isr_exc_13
 
 .global page_fault_stub
-.extern page_fault_handler
-
 page_fault_stub:
-    cld
-    SAVE_REGISTERS
-
-    # Preserve the original saved-register stack pointer.
-    movq %rsp, %r12
-
-    # Arguments:
-    # rdi = faulting virtual address (CR2)
-    # rsi = CPU-generated page-fault error code
-    movq %cr2, %rdi
-    movq 120(%rsp), %rsi
-
-    andq $-16, %rsp
-    call page_fault_handler
-
-    movq %r12, %rsp
-
-    RESTORE_REGISTERS
-
-    # Remove the CPU-generated error code before IRETQ.
-    addq $8, %rsp
-    iretq
+    jmp isr_exc_14

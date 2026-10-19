@@ -23,6 +23,8 @@
 #include "drivers/framebuffer.h"
 #include "drivers/mouse.h"
 #include "gui/desktop.h"
+#include "diagnostics/diagnostics.h"
+#include "drivers/power.h"
 #include "debug.h"
 
 extern volatile uint64_t timer_ticks;
@@ -302,10 +304,32 @@ void kernel_main(uint64_t magic, uint64_t mb_info_addr)
     terminal_write("Kernel: x86-64\n");
     terminal_write("Status: INITIALIZING\n\n");
 
+    diag_init();
+    power_init();
     idt_init();
     pic_init();
     pit_init(100);
     ipc_init();
+
+    int diag_res = test_diagnostics_invariants();
+    terminal_write("Diagnostics & logging invariants: ");
+    if (diag_res == 0) {
+        terminal_write("PASS (ring buffer, 32 entries, safe overflow)\n");
+    } else {
+        terminal_write("FAIL, code ");
+        terminal_write_number((uint32_t)(-diag_res));
+        terminal_putchar('\n');
+    }
+
+    terminal_write("Exception handling invariants: ");
+    int exc_res = test_exception_invariants();
+    if (exc_res == 0) {
+        terminal_write("PASS (32 vectors, frame decoding, page fault)\n");
+    } else {
+        terminal_write("FAIL, code ");
+        terminal_write_number((uint32_t)(-exc_res));
+        terminal_putchar('\n');
+    }
 
     terminal_write("IPC queue invariants: ");
     int ipc_res = test_ipc_invariants();

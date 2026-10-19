@@ -22,6 +22,8 @@
 #include "syscall/syscall.h"
 #include "drivers/framebuffer.h"
 #include "gui/desktop.h"
+#include "drivers/power.h"
+#include "diagnostics/diagnostics.h"
 #include "../debug.h"
 #include <stdint.h>
 
@@ -90,7 +92,12 @@ static void print_help(void)
     terminal_write("  syscall    - Run int $0x80 System Call Dispatch demo\n");
     terminal_write("  panic      - Test kernel panic diagnostic handler\n");
     terminal_write("  ai         - Show AI Companion Architecture & tool allowlist\n");
-    terminal_write("  tests      - Run all OS algorithmic verification tests\n");
+    terminal_write("  tests      - Run all OS algorithmic verification tests\n\n");
+    terminal_write("Diagnostics & Recovery (Phase 18):\n");
+    terminal_write("  diag       - Show comprehensive system diagnostics & metrics\n");
+    terminal_write("  dmesg      - Show kernel ring-buffer diagnostic event log\n");
+    terminal_write("  shutdown   - Graceful system shutdown via ACPI/PM poweroff\n");
+    terminal_write("  reboot     - Controlled system reboot via 8042 reset line\n");
     terminal_write("==================================================\n");
 }
 
@@ -600,6 +607,18 @@ static void execute_command(void)
     }
     else if (cmd_match(command, "panic")) {
         kernel_panic("Manual diagnostic panic triggered via shell command");
+    }
+    else if (cmd_match(command, "diag") || cmd_match(command, "diagnostics")) {
+        diag_print_summary();
+    }
+    else if (cmd_match(command, "dmesg")) {
+        diag_print_dmesg();
+    }
+    else if (cmd_match(command, "shutdown") || cmd_match(command, "poweroff")) {
+        sys_poweroff();
+    }
+    else if (cmd_match(command, "reboot") || cmd_match(command, "restart")) {
+        sys_reboot();
     }
     else if (cmd_match(command, "ai")) {
         print_ai_status();

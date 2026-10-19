@@ -80,6 +80,16 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
    - Dual-channel PS/2 mouse driver with packet decoding and hardware arrow cursor.
    - Zero-regression console fallback: `ESC` returns cleanly to text console shell.
 
+7. **System Diagnostics, Exception Handling & Controlled Recovery (Phase 18)**:
+   - Centralized system telemetry (`kernel/diagnostics/diagnostics.c` / `diagnostics.h`): aggregates live metrics across IRQ counters (IRQ0/1/12, syscalls, yields, faults), scheduler switches, physical frame and heap metrics, and filesystem operations/errors/rollbacks via the `diag` shell command.
+   - Bounded Diagnostic Ring-Buffer Log (`dmesg`): 32-entry static circular buffer with tick timestamps, severity tags (`DEBUG`, `INFO`, `WARN`, `ERROR`, `PANIC`), and safe overwrite eviction under pressure with zero dynamic memory allocation.
+   - 32-Vector Hardware CPU Exception Handling: complete suite of IDT exception stubs in `interrupts.S` establishing standardized 176-byte `exception_frame_t` contexts for both error-code and non-error-code exceptions.
+   - Comprehensive Serial Crash Dumps: transmits RIP, CS, RFLAGS, RSP, SS, registers RAX-R15, CR2, and decoded page-fault error codes directly over COM1 serial (`0x3F8` / `0xE9`).
+   - Controlled Kernel Panic Path: safely halts execution (`cli; hlt`) rather than masking defects behind infinite automated reboot loops.
+   - Controlled Shutdown & Restart (`kernel/drivers/power.c` / `power.h`): clean ACPI poweroff via QEMU port `0x604`, CPU reset via 8042 keyboard controller (`0x64`, `0xFE`), and triple-fault fallback.
+   - Transparent Volatile Storage Disclosure: power management operations explicitly warn that storage is backed by a volatile RAMDisk (`/dev/ram0`), ensuring clear operational boundaries.
+   - Component-Independent Recovery: GUI application failure cleanly resets app state to `APP_STATE_STOPPED` without desktop panics, desktop exit restores text console shell, and AI companion disconnection falls back to offline simulation safely.
+
 ---
 
 ## Quickstart
@@ -197,6 +207,7 @@ Detailed technical architecture, reports, and design docs are available in `docs
 - [`docs/PRESENTATION_OUTLINE.md`](docs/PRESENTATION_OUTLINE.md): Engineering defense and presentation slide outline with anticipated Q&A.
 
 ### Phase Verification Reports
+- [`docs/PHASE18_DIAGNOSTICS_RECOVERY.md`](docs/PHASE18_DIAGNOSTICS_RECOVERY.md): Phase 18 system diagnostics, 32-vector exception crash dumps, and controlled recovery report.
 - [`docs/PHASE17_SETTINGS_NOTIFICATIONS.md`](docs/PHASE17_SETTINGS_NOTIFICATIONS.md): Phase 17 modular system settings application, configuration schema v2, and bounded notification subsystem report.
 - [`docs/PHASE16_AI_DESKTOP.md`](docs/PHASE16_AI_DESKTOP.md): Phase 16 AI desktop experience, live kernel telemetry, and allowlist sandbox security report.
 - [`docs/PHASE13_STABILITY_REPORT.md`](docs/PHASE13_STABILITY_REPORT.md): Phase 13 security audit, stability hardening, stress testing, and performance baselines report.

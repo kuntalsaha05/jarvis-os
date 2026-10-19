@@ -13,6 +13,9 @@ static fs_inode_t inodes[FS_MAX_FILES];
 static uint8_t block_bitmap[FS_BLOCK_SIZE];
 static fs_superblock_t sb;
 static int fs_mounted = 0;
+static uint32_t fs_stat_ops = 0;
+static uint32_t fs_stat_errors = 0;
+static uint32_t fs_stat_rollbacks = 0;
 
 static int str_equals(const char *s1, const char *s2)
 {
@@ -222,13 +225,14 @@ int fs_open(const char *name)
 
 int fs_write(int fd, const void *buf, uint32_t count)
 {
-    if (!fs_mounted) return FS_ERR_NOT_MOUNTED;
-    if (fd < 0 || fd >= FS_MAX_FILES || !open_files[fd].used) return FS_ERR_BAD_FD;
-    if (buf == 0) return FS_ERR_INVALID_PARAM;
-    if (open_files[fd].inode_idx < 0 || open_files[fd].inode_idx >= FS_MAX_FILES) return FS_ERR_BAD_FD;
+    fs_stat_ops++;
+    if (!fs_mounted) { fs_stat_errors++; return FS_ERR_NOT_MOUNTED; }
+    if (fd < 0 || fd >= FS_MAX_FILES || !open_files[fd].used) { fs_stat_errors++; return FS_ERR_BAD_FD; }
+    if (buf == 0) { fs_stat_errors++; return FS_ERR_INVALID_PARAM; }
+    if (open_files[fd].inode_idx < 0 || open_files[fd].inode_idx >= FS_MAX_FILES) { fs_stat_errors++; return FS_ERR_BAD_FD; }
 
     fs_inode_t *node = &inodes[open_files[fd].inode_idx];
-    if (!node->used) return FS_ERR_BAD_FD;
+    if (!node->used) { fs_stat_errors++; return FS_ERR_BAD_FD; }
 
     if (count == 0) return 0;
 
@@ -265,6 +269,8 @@ int fs_write(int fd, const void *buf, uint32_t count)
             int b = alloc_block();
             if (b == -1) {
                 /* Storage exhaustion: Rollback newly allocated blocks */
+                fs_stat_rollbacks++;
+                fs_stat_errors++;
                 for (uint32_t r = 0; r < newly_allocated_count; r++) {
                     free_block(newly_allocated[r]);
                 }
@@ -288,6 +294,8 @@ int fs_write(int fd, const void *buf, uint32_t count)
         int r_res = block_read(node->blocks[block_index], 1, sector_buf);
         if (r_res < 0) {
             /* Rollback */
+            fs_stat_rollbacks++;
+            fs_stat_errors++;
             for (uint32_t r = 0; r < newly_allocated_count; r++) free_block(newly_allocated[r]);
             for (int r = 0; r < FS_DIRECT_BLOCKS; r++) node->blocks[r] = orig_blocks[r];
             node->size = orig_size;
@@ -305,6 +313,8 @@ int fs_write(int fd, const void *buf, uint32_t count)
         int w_res = block_write(node->blocks[block_index], 1, sector_buf);
         if (w_res < 0) {
             /* Rollback */
+            fs_stat_rollbacks++;
+            fs_stat_errors++;
             for (uint32_t r = 0; r < newly_allocated_count; r++) free_block(newly_allocated[r]);
             for (int r = 0; r < FS_DIRECT_BLOCKS; r++) node->blocks[r] = orig_blocks[r];
             node->size = orig_size;
@@ -727,4 +737,11 @@ int test_fs_invariants(void)
     /* Clean format and reinitialize default kernel.cfg */
     fs_init();
     return 0;
+}
+
+void fs_get_stats(uint32_t *ops, uint32_t *errors, uint32_t *rollbacks)
+{
+    if (ops) *ops = fs_stat_ops;
+    if (errors) *errors = fs_stat_errors;
+    if (rollbacks) *rollbacks = fs_stat_rollbacks;
 }
