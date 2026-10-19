@@ -25,6 +25,8 @@
 #include "drivers/power.h"
 #include "diagnostics/diagnostics.h"
 #include "hal/hal.h"
+#include "net/netstack.h"
+#include "net/arp.h"
 #include "../debug.h"
 #include <stdint.h>
 
@@ -101,7 +103,13 @@ static void print_help(void)
     terminal_write("  reboot     - Controlled system reboot via 8042 reset line\n\n");
     terminal_write("Hardware Abstraction Layer (Phase 19):\n");
     terminal_write("  hal        - Display HAL driver registry, state, dependencies & IRQs\n");
-    terminal_write("  devices    - Alias for hal driver status listing\n");
+    terminal_write("  devices    - Alias for hal driver status listing\n\n");
+    terminal_write("Networking Stack (Phase 20):\n");
+    terminal_write("  ifconfig   - Show network interface status, MAC & IP config (alias: ip)\n");
+    terminal_write("  arp        - Display ARP cache address resolution table\n");
+    terminal_write("  netstat    - Display network telemetry & packet statistics\n");
+    terminal_write("  ping <ip>  - Send ICMP echo requests to target IPv4 address\n");
+    terminal_write("  nettest    - Run unified networking stack verification tests\n");
     terminal_write("==================================================\n");
 }
 
@@ -626,6 +634,31 @@ static void execute_command(void)
     }
     else if (cmd_match(command, "hal") || cmd_match(command, "devices")) {
         hal_print_status();
+    }
+    else if (cmd_match(command, "ifconfig") || cmd_match(command, "ip") || cmd_match(command, "netstat")) {
+        netstack_print_status();
+    }
+    else if (cmd_match(command, "arp")) {
+        arp_print_table();
+    }
+    else if (cmd_starts_with(command, "ping")) {
+        const char *arg = command + 4;
+        while (*arg == ' ') arg++;
+        if (*arg == '\0') {
+            arg = "10.0.2.15";
+        }
+        netstack_ping(arg, 4);
+    }
+    else if (cmd_match(command, "nettest") || cmd_match(command, "nettests")) {
+        terminal_write("\nRunning Modular Networking Stack Invariant Suite...\n");
+        int res = test_networking_invariants();
+        if (res == 0) {
+            terminal_write("[PASS] All networking invariants verified (Layers 2-7, Queues, DHCP, Loopback E2E)\n");
+        } else {
+            terminal_write("[FAIL] Networking invariant failure, code ");
+            terminal_write_number((uint32_t)(-res));
+            terminal_putchar('\n');
+        }
     }
     else if (cmd_match(command, "ai")) {
         print_ai_status();

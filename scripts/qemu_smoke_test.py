@@ -49,6 +49,11 @@ def main():
         "diag\n"
         "dmesg\n"
         "hal\n"
+        "ifconfig\n"
+        "arp\n"
+        "netstat\n"
+        "nettest\n"
+        "ping 10.0.2.15\n"
     ).encode("utf-8")
 
     start_time = time.time()
@@ -60,7 +65,7 @@ def main():
             stderr=subprocess.PIPE
         )
 
-        stdout_data, stderr_data = proc.communicate(input=commands_to_send, timeout=12)
+        stdout_data, stderr_data = proc.communicate(input=commands_to_send, timeout=35)
 
     except subprocess.TimeoutExpired:
         proc.kill()
@@ -147,7 +152,13 @@ def main():
         ("System Diagnostics Shell (diag)", "JARVIS-OS SYSTEM DIAGNOSTICS"),
         ("Kernel Diagnostic Log (dmesg)", "JARVIS-OS KERNEL DIAGNOSTIC LOG (DMESG)"),
         ("HAL Shell Status (hal)", "JARVIS-OS HARDWARE ABSTRACTION LAYER (HAL)"),
-        ("HAL Driver Registry Online", "Registered Drivers: 9 | Online: 9")
+        ("HAL Driver Registry Online", "Registered Drivers: 10 | Online: 10"),
+        ("Networking Invariants Boot", "Networking stack invariants: PASS"),
+        ("Network Status Shell (ifconfig)", "JARVIS-OS MODULAR NETWORKING STACK"),
+        ("ARP Resolution Shell (arp)", "JARVIS-OS ARP CACHE RESOLUTION"),
+        ("Ping Execution Shell (ping)", "PING 10.0.2.15"),
+        ("Nettest Invariants Shell", "Running Modular Networking Stack Invariant Suite..."),
+        ("Nettest Invariants Verified", "[PASS] All networking invariants verified")
     ]
 
 

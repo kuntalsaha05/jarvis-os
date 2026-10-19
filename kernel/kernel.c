@@ -26,6 +26,7 @@
 #include "diagnostics/diagnostics.h"
 #include "drivers/power.h"
 #include "hal/hal.h"
+#include "net/netstack.h"
 #include "debug.h"
 
 extern volatile uint64_t timer_ticks;
@@ -314,6 +315,7 @@ void kernel_main(uint64_t magic, uint64_t mb_info_addr)
     pic_init();
     pit_init(100);
     ipc_init();
+    netstack_init();
 
     terminal_write("Hardware abstraction invariants: ");
     int hal_res = test_hal_invariants();
@@ -322,6 +324,16 @@ void kernel_main(uint64_t magic, uint64_t mb_info_addr)
     } else {
         terminal_write("FAIL, code ");
         terminal_write_number((uint32_t)(-hal_res));
+        terminal_putchar('\n');
+    }
+
+    terminal_write("Networking stack invariants: ");
+    int net_res = test_networking_invariants();
+    if (net_res == 0) {
+        terminal_write("PASS (Ethernet, ARP cache, IPv4, ICMP echo, UDP sockets, DHCP fallback)\n");
+    } else {
+        terminal_write("FAIL, code ");
+        terminal_write_number((uint32_t)(-net_res));
         terminal_putchar('\n');
     }
 

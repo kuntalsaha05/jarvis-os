@@ -104,15 +104,22 @@ To ensure absolute transparency and prevent ambiguity, every requirement is tagg
 | **80** | **Multi-Pass Dependency Resolution Engine** | Real Kernel Mechanism | `kernel/hal/hal.c`, `hal.h` | `make test` (*HAL Invariants*) | **PASS** | Topological multi-pass resolver enforcing driver prerequisites (`pit_8254`, `ps2_keyboard`, `ps2_mouse` requiring `pic_8259`), rejection of unmet dependencies (`HAL_ERR_DEP_UNMET`), and reverse-order shutdown. |
 | **81** | **Non-Destructive Hardware Probes** | Real Kernel Mechanism | `kernel/hal/hal.c` | `make test`, `make test-qemu` | **PASS** | Architecture-specific probes: UART scratchpad register readback (`0x3FF`), 8042 PS/2 controller status check (`0x64`), and Multiboot framebuffer structure validation. |
 | **82** | **Dynamic Console Fallback Routing & Shell Diagnostics** | Real Kernel Mechanism | `kernel/hal/hal.c`, `shell/shell.c` | `make test`, `make test-qemu` | **PASS** | `hal_console_write` dynamically mirrors to VGA and COM1 serial, seamlessly falling back to serial on display absence; interactive shell `hal` command outputs registered driver table with classes, states, and IRQs. |
+| **83** | **Modular Network-Device Abstraction & Bounded Queues** | Real Kernel Mechanism | `kernel/net/netdev.c`, `netdev.h` | `make test` (*Networking Invariants*), `make test-qemu` | **PASS** | `net_device_t` interface, bounded 16-packet circular RX ring buffer, monotonic TX/RX byte and packet counters, loopback (`lo0`) and RTL8139 (`eth0`) singleton registration, zero-heap packet paths. |
+| **84** | **Ethernet II Framing, Padding & MAC Filtering** | Real Kernel Mechanism | `kernel/net/ethernet.c`, `ethernet.h` | `make test` (*Ethernet Invariants*) | **PASS** | 14-byte Ethernet framing, automatic 60-byte minimum padding, unicast/broadcast MAC destination filtering, EtherType demux (0x0806 ARP, 0x0800 IPv4). |
+| **85** | **ARP Protocol & Dynamic Address Resolution Cache** | Real Kernel Mechanism | `kernel/net/arp.c`, `arp.h` | `make test` (*ARP Invariants*), `make test-qemu` | **PASS** | 28-byte ARP header framing, static 16-entry ARP table with FIFO eviction, dynamic ARP request/reply generation, interactive shell `arp` inspection command. |
+| **86** | **IPv4 Packet Processing & RFC 1071 Checksum Engine** | Real Kernel Mechanism | `kernel/net/ipv4.c`, `ipv4.h` | `make test` (*IPv4 Invariants*) | **PASS** | 20-byte IPv4 packet validation, 16-bit one's complement Internet checksum (RFC 1071), dotted-decimal string/integer parsing, IP address matching, upper protocol demux (ICMP, UDP). |
+| **87** | **ICMP Echo Subsystem & Network Diagnostics** | Real Kernel Mechanism | `kernel/net/icmp.c`, `netstack.c`, `shell/shell.c` | `make test` (*ICMP Invariants*), `make test-qemu` | **PASS** | ICMP Type 8 Echo Request and Type 0 Echo Reply, ping round-trip telemetry tracking, diagnostic shell commands (`ping <ip>`, `ifconfig`, `ip`, `netstat`, `nettest`). |
+| **88** | **UDP Transport Demux & DHCP Auto-Configuration** | Real Kernel Mechanism | `kernel/net/udp.c`, `dhcp.c` | `make test` (*UDP & DHCP Invariants*) | **PASS** | 8-byte UDP header parsing and length validation, 16-entry port registration callback registry, RFC 2131 DHCP state machine (DISCOVER/OFFER/REQUEST/ACK) with safe static fallback to 10.0.2.15. |
 
 ---
 
 ## 3. Summary of Verification Status
 
-- **Total Tracked Capabilities**: 82
-- **Verified Complete**: 82 (100%)
+- **Total Tracked Capabilities**: 88
+- **Verified Complete**: 88 (100%)
 - **Failing or Blocked**: 0 (0%)
 - **Simulations Documented & Decoupled**: 8 (All cleanly labeled and isolated from real kernel routines)
-- **Architectural Boundaries Explicitly Documented**: All (Single uniprocessor PIC model, identity-mapped 2 MiB address space, Ring 0 monolithic kernel, RAM disk volatility, software-only 2D rasterizer, and host-side AI execution documented in [`docs/KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)).
+- **Architectural Boundaries Explicitly Documented**: All (Single uniprocessor PIC model, identity-mapped 2 MiB address space, Ring 0 monolithic kernel, RAM disk volatility, software-only 2D rasterizer, loopback memory backend, and host-side AI execution documented in [`docs/KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)).
+
 
 

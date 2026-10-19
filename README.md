@@ -99,6 +99,17 @@ Terminal: VGA (0xB8000) + Serial (COM1 0x3F8) + QEMU Debug (0xE9)
    - Console Fallback Routing: `hal_console_write` dynamically mirrors to VGA and COM1 serial, falling back to serial if the display is offline or uninitialized.
    - Interactive Shell Status (`hal` / `devices`): displays formatted driver table with unique identifiers, device classes, operational states, physical backends, dependencies, and IRQ allocations.
 
+9. **Modular Zero-Heap Networking Stack (Phase 20)**:
+   - Network-Device Abstraction (`kernel/net/netdev.c` / `netdev.h`): uniform `net_device_t` supporting MTU enforcement (1500B), bounded 16-packet circular receive queues, monotonic packet/byte telemetry, and zero dynamic heap allocation in packet paths.
+   - Transparent Loopback & Emulated NIC: distinct memory-backed loopback adapter (`lo0`, MAC `02:00:00:00:00:01`, IP `127.0.0.1`) and QEMU RTL8139 hardware-emulated NIC (`eth0`, MAC `52:54:00:12:34:56`, IP `10.0.2.15`), without unbacked claims of live internet connectivity.
+   - Ethernet II Framing (`kernel/net/ethernet.c` / `ethernet.h`): 14-byte MAC header parsing, automatic minimum 60-byte padding, unicast/broadcast MAC filtering, and EtherType demultiplexing (`0x0806` ARP, `0x0800` IPv4).
+   - Dynamic ARP Protocol (`kernel/net/arp.c` / `arp.h`): 28-byte ARP header handling, 16-entry static lookup table with FIFO eviction, dynamic request/reply dispatch, and interactive `arp` table inspection.
+   - IPv4 Network Layer (`kernel/net/ipv4.c` / `ipv4.h`): 20-byte IPv4 packet validation, 16-bit one's complement Internet checksum computation (RFC 1071), dotted-decimal string parsing, loopback IP matching, and ICMP/UDP protocol demux.
+   - ICMP Diagnostics (`kernel/net/icmp.c` / `icmp.h`): Type 8 Echo Request generation, Type 0 Echo Reply processing, sequence number and checksum verification, and ping round-trip telemetry.
+   - UDP Transport Layer (`kernel/net/udp.c` / `udp.h`): 8-byte UDP header verification, length validation, 16-slot port registry, and callback dispatch.
+   - DHCP Client & Fallback (`kernel/net/dhcp.c` / `dhcp.h`): RFC 2131 state machine (`INIT` -> `DISCOVERING` -> `REQUESTING` -> `BOUND` / `FAILED`), message framing with magic cookie `0x63825363`, options parsing, and safe static fallback (`10.0.2.15`, netmask `255.255.255.0`, gateway `10.0.2.2`, DNS `10.0.2.3`).
+   - Diagnostic Shell Commands: `ifconfig` / `ip` (interface telemetry), `arp` (ARP cache), `netstat` (protocol stats), `ping <ip>` (ICMP echo probe), and `nettest` (full networking invariant test suite).
+
 ---
 
 ## Quickstart
@@ -192,6 +203,16 @@ Launch `make run` or `make run-headless` to interact with the `jarvis>` shell:
 | `ipc` | Run Bounded Message Queue IPC test |
 | `panic` | Trigger a test kernel panic with CR2/CR3/RSP register dump and red banner |
 | `ai` | Display AI companion protocol and active allowlisted tools |
+| `hal` / `devices` | Display registered hardware devices, states, and capabilities |
+| `diag` / `telemetry` | Display system diagnostics counters (IRQs, switches, memory, FS) |
+| `dmesg` | Display circular kernel diagnostic event log |
+| `ifconfig` / `ip` | Display network interface configuration, MAC/IP, and TX/RX counters |
+| `arp` | Display ARP cache table entries and IP-to-MAC resolution status |
+| `netstat` | Display networking protocol packet and byte telemetry counters |
+| `ping <ip>` | Send ICMP Echo Request probe to target IPv4 address |
+| `nettest` | Run complete in-kernel networking stack invariant test suite |
+| `poweroff` / `shutdown` | Controlled ACPI system poweroff |
+| `reboot` | Controlled CPU reset via 8042 controller |
 | `tests` | Run the complete in-kernel benchmark suite |
 | `clear` | Clear the screen |
 
@@ -216,6 +237,7 @@ Detailed technical architecture, reports, and design docs are available in `docs
 - [`docs/PRESENTATION_OUTLINE.md`](docs/PRESENTATION_OUTLINE.md): Engineering defense and presentation slide outline with anticipated Q&A.
 
 ### Phase Verification Reports
+- [`docs/PHASE20_NETWORKING.md`](docs/PHASE20_NETWORKING.md): Phase 20 modular zero-heap networking stack, Ethernet, ARP, IPv4, ICMP, UDP, and DHCP report.
 - [`docs/PHASE19_HAL.md`](docs/PHASE19_HAL.md): Phase 19 hardware abstraction layer, driver registry, dependencies, and probes report.
 - [`docs/PHASE18_DIAGNOSTICS_RECOVERY.md`](docs/PHASE18_DIAGNOSTICS_RECOVERY.md): Phase 18 system diagnostics, 32-vector exception crash dumps, and controlled recovery report.
 - [`docs/PHASE17_SETTINGS_NOTIFICATIONS.md`](docs/PHASE17_SETTINGS_NOTIFICATIONS.md): Phase 17 modular system settings application, configuration schema v2, and bounded notification subsystem report.

@@ -306,6 +306,7 @@ const char *hal_class_name(hal_device_class_t dev_class)
         case HAL_DEV_CLASS_DISPLAY:              return "DISPLAY";
         case HAL_DEV_CLASS_BLOCK:                return "BLOCK";
         case HAL_DEV_CLASS_POWER:                return "POWER";
+        case HAL_DEV_CLASS_NETWORK:              return "NETWORK";
         default:                                 return "UNKNOWN";
     }
 }
@@ -565,6 +566,17 @@ static int adapter_power_reset(void)
 #endif
 }
 
+static int adapter_net_loopback_probe(void)
+{
+    return 1;
+}
+
+static int adapter_net_loopback_init(const void *config)
+{
+    (void)config;
+    return 0;
+}
+
 /* Core Drivers Registration */
 void hal_register_core_drivers(void)
 {
@@ -729,6 +741,24 @@ void hal_register_core_drivers(void)
         .ioctl = NULL
     };
     hal_register_driver(&pwr_drv);
+
+    hal_driver_t net_drv = {
+        .name = "net_loopback",
+        .description = "Loopback In-Memory Virtual Network Adapter (lo0)",
+        .dev_class = HAL_DEV_CLASS_NETWORK,
+        .backend = HAL_BACKEND_MEMORY_BACKED,
+        .capabilities = HAL_CAP_READ | HAL_CAP_WRITE | HAL_CAP_NETWORK,
+        .dependency = "",
+        .irq_number = 0xFFFFFFFF,
+        .probe = adapter_net_loopback_probe,
+        .init = adapter_net_loopback_init,
+        .shutdown = NULL,
+        .reset = NULL,
+        .read = NULL,
+        .write = NULL,
+        .ioctl = NULL
+    };
+    hal_register_driver(&net_drv);
 }
 
 /* Console Fallback & I/O Routing */

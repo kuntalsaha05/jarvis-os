@@ -53,7 +53,15 @@ OBJECTS = \
 	build/desktop.o \
 	build/diagnostics.o \
 	build/power.o \
-	build/hal.o
+	build/hal.o \
+	build/netdev.o \
+	build/ethernet.o \
+	build/arp.o \
+	build/ipv4.o \
+	build/icmp.o \
+	build/udp.o \
+	build/dhcp.o \
+	build/netstack.o
 
 .PHONY: all clean iso run run-headless test test-ai test-qemu test-gui test-release test-shutdown test-all bench bench-full
 
@@ -191,6 +199,30 @@ build/power.o: kernel/drivers/power.c | build
 build/hal.o: kernel/hal/hal.c kernel/hal/hal.h | build
 	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
 
+build/netdev.o: kernel/net/netdev.c kernel/net/netdev.h | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/ethernet.o: kernel/net/ethernet.c kernel/net/ethernet.h | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/arp.o: kernel/net/arp.c kernel/net/arp.h | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/ipv4.o: kernel/net/ipv4.c kernel/net/ipv4.h | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/icmp.o: kernel/net/icmp.c kernel/net/icmp.h | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/udp.o: kernel/net/udp.c kernel/net/udp.h | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/dhcp.o: kernel/net/dhcp.c kernel/net/dhcp.h | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
+build/netstack.o: kernel/net/netstack.c kernel/net/netstack.h | build
+	$(CC) $(CFLAGS) -Ikernel -c $< -o $@
+
 $(KERNEL): $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
@@ -210,7 +242,7 @@ run-headless: $(ISO)
 
 test:
 	mkdir -p build
-	gcc -O2 -Wall -Wextra -DHOST_TEST -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/memory/heap.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/event.c kernel/gui/wm.c kernel/gui/config.c kernel/gui/notification.c kernel/gui/app.c kernel/gui/desktop.c kernel/interrupts/idt.c kernel/diagnostics/diagnostics.c kernel/drivers/power.c kernel/hal/hal.c -o build/host_tests
+	gcc -O2 -Wall -Wextra -DHOST_TEST -Ikernel tests/host_tests.c kernel/algorithms/sched_sim.c kernel/algorithms/page_replace.c kernel/algorithms/banker.c kernel/algorithms/deadlock.c kernel/algorithms/mem_fit.c kernel/algorithms/file_alloc.c kernel/algorithms/disk_sched.c kernel/memory/heap.c kernel/ipc/ipc.c kernel/ipc/semaphore.c kernel/ipc/sync_demo.c kernel/storage/block.c kernel/storage/ramdisk.c kernel/storage/fs.c kernel/drivers/framebuffer.c kernel/drivers/mouse.c kernel/gui/font.c kernel/gui/graphics.c kernel/gui/event.c kernel/gui/wm.c kernel/gui/config.c kernel/gui/notification.c kernel/gui/app.c kernel/gui/desktop.c kernel/interrupts/idt.c kernel/diagnostics/diagnostics.c kernel/drivers/power.c kernel/hal/hal.c kernel/net/netdev.c kernel/net/ethernet.c kernel/net/arp.c kernel/net/ipv4.c kernel/net/icmp.c kernel/net/udp.c kernel/net/dhcp.c kernel/net/netstack.c -o build/host_tests
 	./build/host_tests
 
 test-ai:

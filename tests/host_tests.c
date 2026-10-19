@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <assert.h>
 #include "algorithms/sched_sim.h"
 #include "algorithms/page_replace.h"
@@ -33,6 +34,7 @@
 #include "drivers/power.h"
 #include "interrupts/idt.h"
 #include "hal/hal.h"
+#include "net/netstack.h"
 
 /* Provide stubs for terminal functions when running in host unit test mode */
 void terminal_write(const char *str) {
@@ -947,7 +949,7 @@ static void test_hal_subsystem_invariants(void)
     assert(hal_get_online_count() == 0);
 
     hal_register_core_drivers();
-    assert(hal_get_driver_count() == 9);
+    assert(hal_get_driver_count() == 10);
 
     /* Verify drivers exist */
     assert(hal_find_driver("pic_8259") != NULL);
@@ -959,15 +961,17 @@ static void test_hal_subsystem_invariants(void)
     assert(hal_find_driver("framebuffer") != NULL);
     assert(hal_find_driver("ramdisk_block") != NULL);
     assert(hal_find_driver("acpi_power") != NULL);
+    assert(hal_find_driver("net_loopback") != NULL);
 
     /* Multi-pass initialization */
     int online = hal_init_all();
-    assert(online >= 8); /* Framebuffer may be absent in pure mock host test, but other 8 online */
+    assert(online >= 9); /* Framebuffer may be absent in pure mock host test, but other 9 online */
     assert(hal_find_driver("pic_8259")->state == HAL_STATE_ONLINE);
     assert(hal_find_driver("pit_8254")->state == HAL_STATE_ONLINE);
     assert(hal_find_driver("serial_uart")->state == HAL_STATE_ONLINE);
     assert(hal_find_driver("vga_terminal")->state == HAL_STATE_ONLINE);
     assert(hal_find_driver("ramdisk_block")->state == HAL_STATE_ONLINE);
+    assert(hal_find_driver("net_loopback")->state == HAL_STATE_ONLINE);
 
     /* 4. Test unified block read/write through HAL adapter */
     uint8_t wbuf[512];
@@ -988,6 +992,67 @@ static void test_hal_subsystem_invariants(void)
     /* 6. Test graceful shutdown in reverse order */
     assert(hal_shutdown_all() == 0);
     assert(hal_get_online_count() == 0);
+
+    printf("PASS\n");
+}
+
+static void test_networking_stack_invariants(void)
+{
+    printf("Test 20: Networking Stack Invariants & Packet Flow... ");
+
+    /* 1. Run low-level module invariant tests */
+    assert(test_netdev_invariants() == 0);
+    assert(test_ethernet_invariants() == 0);
+    assert(test_arp_invariants() == 0);
+    assert(test_ipv4_invariants() == 0);
+    assert(test_icmp_invariants() == 0);
+    assert(test_udp_invariants() == 0);
+    assert(test_dhcp_invariants() == 0);
+
+    /* 2. Run end-to-end loopback packet flow */
+    int net_inv_res = test_networking_invariants();
+    if (net_inv_res != 0) {
+        printf("DEBUG: test_networking_invariants returned %d\n", net_inv_res);
+    }
+    assert(net_inv_res == 0);
+
+    /* 3. Verify IP string conversion helpers */
+    char ip_str[32];
+    net_ip_to_str(0x0A00020F, ip_str, sizeof(ip_str));
+    assert(strcmp(ip_str, "10.0.2.15") == 0);
+    assert(net_str_to_ip("10.0.2.15") == 0x0A00020F);
+    assert(net_str_to_ip("192.168.1.1") == 0xC0A80101);
+    assert(net_str_to_ip("256.0.0.1") == 0);
+
+    /* 4. Verify MAC string formatting */
+    char mac_str[32];
+    uint8_t sample_mac[6] = { 0x52, 0x54, 0x00, 0x12, 0x34, 0x56 };
+    eth_format_mac(sample_mac, mac_str, sizeof(mac_str));
+    assert(strcmp(mac_str, "52:54:00:12:34:56") == 0);
+
+    /* 5. Verify ARP cache lookup and capacity eviction */
+    arp_init();
+    uint8_t mac_out[6];
+    assert(arp_lookup(0x0A000202, mac_out) == NET_ERR_NOT_FOUND);
+    arp_update_cache(0x0A000202, sample_mac);
+    assert(arp_lookup(0x0A000202, mac_out) == NET_OK);
+    for (int i = 0; i < 6; i++) {
+        assert(mac_out[i] == sample_mac[i]);
+    }
+
+    /* 6. Verify Netstack Device Registry & Telemetry */
+    netstack_init();
+    net_device_t *lo = netdev_get_by_name("lo0");
+    net_device_t *eth = netdev_get_by_name("eth0");
+    assert(lo != NULL);
+    assert(eth != NULL);
+    assert(lo->backend == HAL_BACKEND_MEMORY_BACKED);
+    assert(eth->backend == HAL_BACKEND_HARDWARE);
+    assert(netdev_get_count() >= 2);
+
+    /* 7. Verify diagnostic status and ARP table printing without faults */
+    netstack_print_status();
+    arp_print_table();
 
     printf("PASS\n");
 }
@@ -1017,6 +1082,7 @@ int main(void)
     test_stress_and_stability_invariants();
     test_diagnostics_and_recovery_invariants();
     test_hal_subsystem_invariants();
+    test_networking_stack_invariants();
 
     printf("==================================================\n");
     printf("   ALL HOST UNIT TESTS COMPLETED SUCCESSFULLY!    \n");

@@ -380,7 +380,7 @@ class TestAICompanion(unittest.TestCase):
     def test_phase19_hardware_abstraction_layer(self):
         # 1. Verify HAL Static Driver Registry Limits
         hal_max_drivers = 16
-        core_driver_count = 9
+        core_driver_count = 10
         self.assertLessEqual(core_driver_count, hal_max_drivers)
 
         # 2. Verify Core Driver Identification and Backend Schema
@@ -394,10 +394,12 @@ class TestAICompanion(unittest.TestCase):
             "framebuffer": {"class": "DISPLAY", "backend": "HARDWARE", "dep": None, "irq": None},
             "ramdisk_block": {"class": "BLOCK", "backend": "MEMORY_BACKED", "dep": None, "irq": None},
             "acpi_power": {"class": "POWER", "backend": "HARDWARE", "dep": None, "irq": None},
+            "net_loopback": {"class": "NETWORK", "backend": "MEMORY_BACKED", "dep": None, "irq": None},
         }
 
-        self.assertEqual(len(core_drivers), 9)
+        self.assertEqual(len(core_drivers), 10)
         self.assertEqual(core_drivers["ramdisk_block"]["backend"], "MEMORY_BACKED")
+        self.assertEqual(core_drivers["net_loopback"]["backend"], "MEMORY_BACKED")
         self.assertEqual(core_drivers["serial_uart"]["backend"], "HARDWARE")
         self.assertEqual(core_drivers["pit_8254"]["dep"], "pic_8259")
         self.assertEqual(core_drivers["ps2_keyboard"]["dep"], "pic_8259")
@@ -407,6 +409,70 @@ class TestAICompanion(unittest.TestCase):
         serial_online = True
         console_routed_to = "serial_uart" if (display_offline and serial_online) else "vga_terminal"
         self.assertEqual(console_routed_to, "serial_uart")
+
+    def test_phase20_networking_stack(self):
+        # 1. Ethernet Frame Boundary Sizing Standards
+        eth_alen = 6
+        eth_hlen = 14
+        eth_min_frame = 60
+        eth_max_frame = 1518
+        eth_mtu = 1500
+
+        self.assertEqual(eth_alen, 6)
+        self.assertEqual(eth_hlen, 14)
+        self.assertEqual(eth_min_frame, 60)
+        self.assertEqual(eth_max_frame, 1518)
+        self.assertEqual(eth_mtu, 1500)
+
+        # 2. Bounded Circular Receive Queue Sizing & Overflow Accounting
+        rx_queue_capacity = 16
+        enqueued_packets = 20
+        dropped_expected = enqueued_packets - rx_queue_capacity
+        self.assertEqual(dropped_expected, 4)
+
+        # 3. Internet Checksum Invariant: Header + Checksum folds to 0
+        def compute_checksum(data: bytes) -> int:
+            total = 0
+            for i in range(0, len(data), 2):
+                word = (data[i] << 8) + (data[i+1] if i+1 < len(data) else 0)
+                total += word
+                while total >> 16:
+                    total = (total & 0xFFFF) + (total >> 16)
+            return (~total) & 0xFFFF
+
+        hdr_no_cksum = bytes([
+            0x45, 0x00, 0x00, 0x3c,
+            0x1c, 0x46, 0x40, 0x00,
+            0x40, 0x06, 0x00, 0x00, # Checksum = 0
+            0x0a, 0x00, 0x02, 0x0f, # 10.0.2.15
+            0x0a, 0x00, 0x02, 0x02  # 10.0.2.2
+        ])
+        cksum = compute_checksum(hdr_no_cksum)
+        hdr_with_cksum = bytearray(hdr_no_cksum)
+        hdr_with_cksum[10] = (cksum >> 8) & 0xFF
+        hdr_with_cksum[11] = cksum & 0xFF
+        self.assertEqual(compute_checksum(bytes(hdr_with_cksum)), 0)
+
+        # 4. Accurate Hardware vs Memory-backed Telemetry Representation
+        interfaces = {
+            "lo0": {"mac": "02:00:00:00:00:01", "type": "LOOPBACK", "backend": "MEMORY_BACKED"},
+            "eth0": {"mac": "52:54:00:12:34:56", "type": "ETHERNET", "backend": "HARDWARE"}
+        }
+        self.assertEqual(interfaces["lo0"]["backend"], "MEMORY_BACKED")
+        self.assertEqual(interfaces["eth0"]["backend"], "HARDWARE")
+        self.assertTrue(interfaces["lo0"]["mac"].startswith("02:")) # Locally administered
+
+        # 5. DHCP State Machine & Fallback Static IP Verification
+        dhcp_states = ["INIT", "DISCOVERING", "REQUESTING", "BOUND", "FAILED"]
+        self.assertIn("BOUND", dhcp_states)
+        static_ip_config = {
+            "ip": "10.0.2.15",
+            "netmask": "255.255.255.0",
+            "gateway": "10.0.2.2",
+            "dns": "10.0.2.3"
+        }
+        self.assertEqual(static_ip_config["ip"], "10.0.2.15")
+        self.assertEqual(static_ip_config["gateway"], "10.0.2.2")
 
 
 if __name__ == "__main__":

@@ -34,7 +34,8 @@ typedef enum {
     HAL_DEV_CLASS_INPUT_POINTER,
     HAL_DEV_CLASS_DISPLAY,
     HAL_DEV_CLASS_BLOCK,
-    HAL_DEV_CLASS_POWER
+    HAL_DEV_CLASS_POWER,
+    HAL_DEV_CLASS_NETWORK
 } hal_device_class_t;
 
 /* Backend Implementation Type */
@@ -64,6 +65,7 @@ typedef enum {
 #define HAL_CAP_POWER_MGMT  0x00000020
 #define HAL_CAP_GRAPHICS    0x00000040
 #define HAL_CAP_FALLBACK    0x00000080
+#define HAL_CAP_NETWORK     0x00000100
 
 /* Standard Driver Interface Definition */
 typedef struct hal_driver {
