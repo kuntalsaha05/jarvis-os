@@ -129,3 +129,4 @@ uint32_t hal_get_online_count(void);
 int test_hal_invariants(void);
 
 #endif /* HAL_H */
+

@@ -165,3 +165,4 @@ Registered Drivers: 9 | Online: 9 | Registry Capacity: 16
 1. **Static Driver Table**: The driver registry supports up to 16 static boot-time drivers (`HAL_MAX_DRIVERS = 16`). Hot-plug device addition is deliberately unsupported.
 2. **Volatile Storage Backing**: Block device operations route to the in-memory RAMDisk (`/dev/ram0`, 64 KiB). HAL block drivers disclose storage volatility across reboots.
 3. **PCI / ACPI Extensions**: HAL provides a foundation for future PCI device scanning and ACPI AML table parsing, but does not claim their presence until hardware drivers are implemented.
+
